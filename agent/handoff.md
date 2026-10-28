@@ -2,7 +2,7 @@
 plan_id: IPGW-META-V1
 revision: 2026-08-28-r2
 derived: true
-snapshot_at: 2026-09-01
+snapshot_at: 2026-09-02
 ---
 
 # 当前执行交接
@@ -12,12 +12,14 @@ snapshot_at: 2026-09-01
 ## 当前执行
 
 - 执行者：Codex。
-- 工作包：`RC-BUILD`。M0 非阻塞门禁已通过 PR #21 以普通 merge 合入受保护 main `3786382bfe0b91c428d45166d4dbb046b57c720e`；merge 双亲、tree、GitHub 签名及合入后 CI 六项/Native 七项均已复验。维护者已授权从精确 main 单次生成正式 `v1.0.0` Candidate。
-- 修改边界：允许只读冻结 main/rulesets/tag/release/checks，dispatch Candidate workflow，验证 artifact/manifest/hash/attestation，并在任何 build/upload 前的自动化缺陷上做最小 workflow/test/docs 修复、签名 PR 与普通 merge。不得 bypass/admin/force，不得创建 tag、draft 或 release，也不得启动校园网、认证、login/logout、网络修改或 VM。
-- 停止条件：source/main/tree/signature/ruleset/check/tag 发生漂移，artifact/attestation 身份无法精确证明，或任何 secret/leak/CI 门禁失败时立即停止。run `33464985630` 在 preflight 无制品失败；run `33466493360` 的 Windows jobs 在 CLI verifier 失败；CLI 修复合入后 run `33468379539` 的 full verifier 六平台均通过，但 Candidate-mode installtest 又以未规范化环境路径调用核心 verifier，导致两个 Windows jobs 失败且 attestation skipped。artifacts `9785072853`/`9785669867` 均不得转运或晋升；installtest 适配修复合入前不得再次 dispatch。
+- 工作包：旧 Candidate 上的 BHK 有线诊断已经把失败点收敛到 CAS HTML 被 JSONP 启发式误分类；`ac_id` 有界重定向修复与 CAS HTML-first 修复已分别经 PR #25/#26 合入。远端受保护 `main` 当前为 `fbce60521ba767b133e2dda70a2e2dc19aa06f3b`，旧 Candidate `v1.0.0-d851cbf3b3e4-33470568609.1` 与 `v1.0.0-ed367bb27ec0-33586390643.1` 均不含完整修复，不得继续形成正式 evidence。下一可执行工作包重新回到 `RC-BUILD`。
+- 修改边界：维护者已明确授权新对话从精确远端 `main` `fbce60521ba767b133e2dda70a2e2dc19aa06f3b` 开始新的 `RC-BUILD`，包括只读前检、一次 Candidate workflow dispatch、等待并核验唯一 artifact、manifest/hash、六平台原生安装和 11-subject attestation，以及保留 ignored 只读本地副本。该授权不延伸到 `LAB-TRANSFER`、BHKDesktop SSH/SCP/Xftp、产品调用、校园网请求、凭据、login/logout、Wi-Fi、`network scan`、网络修改、VM、promotion、tag、draft 或 release。
+- 停止条件：开始时必须先保护本文件与 `docs/upgrade/status.md` 的未暂存内容和新 SHA-256，确认 index 为空；本地 `main`/`origin/main` 当前仍停在 `ed367bb27ec073e18635fcfe727e1db735fb5f3d`，当前分支为 `codex/cas-html-before-jsonp`，所以只能在不覆盖两份文档的前提下 fetch 并核对远端 `main`。若远端 main、tree `f455a4226b658eaf958f32cb19eda7b129305402`、GitHub 签名、main/tag ruleset、tag 缺失、合并后 CI `33603787537`/Native `33603787553` 或 Candidate 输入任一漂移，必须在 dispatch 前停止。不得复用或覆盖两个旧 Candidate。
 
 ## 已完成
 
+- `RC-BUILD`：installtest 路径适配 signed commit `9844957d60a86c294351cb9d3b77e53010e892a5` 经 PR #24 的 CI 六项/Native 七项成功后普通合入 main `d851cbf3b3e4500a3b9db57d37a8b3913e0e57c4`，合入后 CI `33470174146` 与 Native `33470174179` 再次全部成功。Candidate run `33470568609` 的 preflight、唯一 build/upload、六平台 full/smoke install 与 attestation 全部成功；artifact `9786395563`、服务端/raw archive digest `sha256:76fdb20f94053c02e807e54b15d1b105e44dd0a3ec75b981fc6f24d095652f13`、candidate-manifest SHA-256 `d45772925464b80e1050ebb9cd81a38d7ed8646b437e07c1e6d1ac610c5801ea`、build-input SHA-256 `1ed7d8aef7778a12e5a699ea7de7fe23fe0afb218f35d0d6e3e3e9b829f97c9a` 与 attestation IDs `44319316`/`44319319` 已独立复验。原始 ZIP 与 14 文件 closed tree 的 ignored 本地副本均已设为只读；未创建 tag、draft、release 或真实网络会话。
+- `LAB-TRANSFER`：ignored Windows 单文件包大小 `5286558`、SHA-256 `1a69d15c89776203b2433cd74dd00e2c0ec6eeb1e47fe15e145648102bc4bb4e`，只含 Candidate 的 Windows/amd64 产品 binary、对应 helper、candidate manifest、checksums 与封闭安装/清理入口。维护者在 BHKDesktop-WSL2 自动核验返回 `upload_present=true`、`sha256_match=true`、`stage_ready=true`；Windows 私有落盘返回 `result=pass`、`candidate_id=v1.0.0-d851cbf3b3e4-33470568609.1`、`remote_reused=false`、`windows_payload_verified=true`、`product_invocations=0`、`network_requests=0`、`cleanup_confirmed=true`。WSL 上传包与 staging 已清理，Windows Candidate 保留；未运行产品或形成 live evidence。Linux payload 只在本地 ignored harness 中准备，因 ZOS 隔离 `blocked` 未上传或执行。
 - `WP-M0-PREFLIGHT`：只读核对完成；结果已在当前任务中报告，未创建提交或修改 refs。
 - `WP-R2-SPEC-A`：r2 完整计划、正式状态以及 [ADR-0007](../docs/architecture/decisions/ADR-0007-immutable-candidate-promotion.md)、[ADR-0008](../docs/architecture/decisions/ADR-0008-offline-transactional-installer.md)、[ADR-0009](../docs/architecture/decisions/ADR-0009-separated-live-test-plane.md) 已落盘；未修改产品代码、Git refs、远端或发布状态。
 - `WP-R2-SPEC-B`：发布、离线安装、live validation、evidence、认证能力、校园实验室和无 GUI 专题规范已落盘；新增稳定 ID 均有唯一 docs 标题声明和有效交叉链接。
@@ -78,6 +80,12 @@ snapshot_at: 2026-09-01
 - status bundle 内嵌来自干净 clone 的 Windows/amd64 exact-source binary：大小 `8242176`、SHA-256 `158357fde02a590ee0bee921627a21fded05e0c12ced49dc6c096d16c8070bd5`、Go `1.26.1`、`vcs.revision=147bfa9bcaf357b175bc183f6e67543223a62d8b`、`vcs.modified=false`。该 binary 不是 Native run `33324692028` 的 Go 1.25 artifact，不是 Candidate、tag 或 release。
 - 最终 bundle SHA-256 为 `e72659dfdbf1165142591eb6c2542b0aeed7572bd44ca345980ad50366d8ffb4`；维护者的 shell 自动校验返回 `upload_present=true`、`sha256_match=true`。封闭结果为 `result=pass`、`child_phase=complete`、`dns_invocations=1`、`status_invocations=1`、`gateway_request_upper_bound=1`、`status_outcome=success`、`network_state=reachable`、`session_state=online`、`cleanup_confirmed=true`。这证明该 exact-source build 在 BHKDesktop Win11 物理有线上接受了真实 legacy CSV 状态形状；没有运行 login/logout、使用凭据、切换 Wi-Fi、执行 `network scan` 或修改网络，且未输出原始产品文本、身份或网络标识。
 - `cleanup_confirmed=true` 同时确认固定 WSL staging、Windows `%LOCALAPPDATA%` 目标与上传脚本均已清理。修复后的 PowerShell 5.1 合成整链、AST/命令闭集、Bash mapper/E2E、确定性重建、gitleaks、doccheck、`git diff --check`、ignore/tracked/index 与两份受保护文件前置 hash 门禁均通过；整个 harness 保持 ignored、0 个 tracked 路径。
+- BHK 管理链路已在维护者私有 Windows 管理员 PowerShell 中完成一次加固和恢复演练：Cloudflared 固定原生 IPv6 后，Win-CF 与 WSL-CF SSH 在校园账号 offline 时仍可重新连接；RealVNC 的 WinHTTP 代理尝试虽曾通过静态 audit，但 offline 后 Viewer 不可用，随后已执行固定 `RollbackRealVNC`，NAS 旧版 Meta 只用于恢复同一上游路由器认证，Viewer 在线恢复后仅作为次要通道。下一真实窗口必须以 Win-CF SSH 为主要管理面，不得把 RealVNC 可用性当作硬前置或独立 IPv6 证明。每个新 Win-CF SSH 会话都先运行管理员布尔检查，再显式启动 Windows PowerShell；不得假定 CMD 已处于 PowerShell。
+- 旧 Candidate `v1.0.0-d851cbf3b3e4-33470568609.1` 的三次正式有线 runner 均未形成通过证据：2026-09-01 首次执行因 initial status 非 offline 而 blocked，未进入 login；维护者关闭 Wi-Fi、从官方门户确认账号 offline 并停用 NAS 自动重登后，同日复测与 2026-09-02 精确有线 profile 重绑后的复测都通过 `initial_status_offline`，但 `login_logged_in` 以退出码 6 / `protocol_changed` 失败，且两次均未出现 password prompt。封闭 summary、NAS 路由器 offline 复核和 `password_prompt_seen=false` 共同证明失败发生在 credential provider 之前；未保存原始响应或凭据。
+- 无凭据 precredential 诊断在“Wi-Fi 关闭、账号 offline、单有线、TUN 关闭、Win-CF SSH 可用、NAS 恢复路径 idle 且自动登录关闭”环境中完成。旧 Candidate 首先暴露 `ac_id_not_discovered`；后续封闭 shape 证明匿名发现需要在同一网关 host 内跟随一个无查询重定向，第二个重定向才出现合法十进制 `ac_id`。docs-first 修复 commit `ab1cca6d506b9c569a6fe7fd50bc12e15ce1d234` 经 PR #25 的 CI `33585698264` 与 Native `33585698135` 成功后，以普通 merge 合入 `ed367bb27ec073e18635fcfe727e1db735fb5f3d`，merge 后 CI `33586054877` 与 Native `33586054884` 再次成功；head/merge GitHub 签名均为 `valid`。
+- 基于 `ed367bb27ec073e18635fcfe727e1db735fb5f3d` 的 Candidate run `33586390643` 全部成功，生成 `v1.0.0-ed367bb27ec0-33586390643.1`：artifact `9830238126`、digest/raw archive SHA-256 `57dc4763a0bb82e3f2610b5179787b298e6782c7caeb510f53e26dc59f3ddf98`、candidate manifest SHA-256 `3358ba6b9dc6a09c82a6e87fe3fc4299c4242b0db02d2bac46fd4f308de3fe0e`、build-input SHA-256 `112762f92bd1b1dbc6617ad0201a088c41bdd53e55315b7152160ed4eddabd60`；六平台验证和 attestation job 通过。本地 ignored 只读副本与 BHK transfer 包 `3d51bd286d20ffa8860d1af02efa66ec1d548bb18b808b6cedfa7c8098cb7e97` 均完成核验，BHK 安装返回 exact candidate ID、`windows_payload_verified=true`、零产品/零网络请求和清理成功。
+- 新 Candidate 的无凭据诊断不再卡在 `ac_id`，而在四个请求后返回 `cas_page/page_parse_failed`。封闭 CAS shape helper 只输出布尔/枚举：2xx 完整 HTML、可解析同源 login form/action、`lt`/`execution`/password input 存在、同源 login script candidate 存在、inline public key 不存在、challenge parse 失败；未输出 HTML、URL、网络标识或认证材料。根因是 `internal/cas/challenge.go` 在检查 leading HTML 前运行 JSONP 启发式，普通页面内联 JavaScript 的括号与对象字面量使整页被错误送入严格 JSONP decoder。
+- docs-first CAS HTML-first 修复由 signed commit `96b5c810aea36d05427654f818e3592ea5a7f34a` 实现，保留严格 JSON/JSONP 与 challenge fail-closed 语义；PR #26 的 CI `33602941140` 全部成功，Native `33602941165` 中一次 macOS amd64 artifact 下载遭 GitHub 中间层 403，仅读取失败日志并只重跑该 job 后全部成功。PR 以普通 merge 合入 `fbce60521ba767b133e2dda70a2e2dc19aa06f3b`，双亲为 `ed367bb27ec073e18635fcfe727e1db735fb5f3d` 与 implementation commit，tree 为 `f455a4226b658eaf958f32cb19eda7b129305402`，GitHub 签名为 `valid`；merge 后 CI `33603787537` 六项与 Native `33603787553` 七项全部成功。没有在该 source 上启动 Candidate。
 
 ## 阻塞
 
@@ -85,12 +93,17 @@ snapshot_at: 2026-09-01
 - 三个旧对象按维护者决定暂时搁置；完成前 [`SEC-HISTORY-001`](../docs/architecture/security.md#sec-history-001历史泄露响应) 和 M0 继续保持 `in_progress`，但按 [`ADR-0011`](../docs/architecture/decisions/ADR-0011-nonblocking-m0-governance.md)不再阻塞 Candidate、Promotion、release 或真实验收。
 - `LAB-DISCOVER` 已以 ZOS 隔离能力未获证明的 `blocked` 结果完成；这不是待继续试错的授权，也不影响 BHK fallback 的独立匿名 parser compatibility 结论。
 - BHKDesktop Win11 物理有线匿名 parser compatibility 不再 blocked：新的人工 Xftp/Xshell 窗口已在完整 topology preflight 后以一次 DNS 与一次 bound `status` 返回封闭 `pass`。历史中断窗口与 preflight fail-closed 窗口仍保持各自原结论，不与本次成功合并或充当正式 evidence。
-- BHK 正式 live-gate 仍 blocked：本次不是 Candidate/evidence，且匿名 `status` 观察到既有会话为 online；runner 要求 initial status 明确 offline，Agent 不自动 logout、恢复账号会话或读取 controller secret。Wi-Fi 匿名路径、`network scan` 与认证矩阵均未执行。
+- BHK Candidate transfer 已完成，但正式 live-gate 运行前置仍未满足：先前匿名 `status` 观察到既有会话为 online，runner 要求 initial status 明确 offline；Agent 不自动 logout、恢复账号会话或读取 controller secret。Wi-Fi 匿名路径、`network scan` 与认证矩阵均未执行。
+- 两个历史 Candidate 均已被后续协议代码变更取代；当前 BHK 私有目录只含旧 Candidate，不存在绑定 `fbce60521ba767b133e2dda70a2e2dc19aa06f3b` 的可接受 Candidate。`LAB-PASSWORD-BHK` 因此必须等待新 `RC-BUILD` 与新的 `LAB-TRANSFER`，不得直接重跑旧 runner。
+- BHK 有线管理链路的 hard requirement 是 Cloudflared/Win-CF SSH 在 Wi-Fi 关闭、校园账号 offline 时可重新连接；RealVNC offline 连通性没有稳定证明，NAS 旧版 Meta 只能待命恢复且必须关闭自动重登，不能参与测试会话。
 
 ## 下一步
 
 - NAS 真实网络路径保持 fail closed，仅可用于离线 Linux 安装与无凭据合成测试；除非以后出现可证明宿主测试口无 IP/DHCP/default route 的 ZOS 官方能力，否则不恢复 LAB-PROVISION。
-- 当前先完成 `codex/m0-nonblocking-release-gates` 的签名提交、push、PR 与 required CI；通过后等待维护者审阅，不自动 merge。PR 合入后的下一工作包为独立授权的 `RC-BUILD`，不得由本工作包自动 dispatch。
+- 新对话直接进入已获授权的 `RC-BUILD`：在保护当前两份未暂存文档后 fetch/核对远端 `main` `fbce60521ba767b133e2dda70a2e2dc19aa06f3b`，复验签名、tree、ruleset、tag 缺失和合并后 13 项检查，随后只 dispatch 一次 Candidate workflow；等待全部 jobs 后下载唯一 artifact，独立验证 raw digest、14 文件 closed tree、两级 checksums、manifest/build-input、六平台结果和 11-subject attestations，并保留 ignored 只读副本。完成后停止，不自动进入 transfer。
+- 新 Candidate 通过后，下一个独立工作包才是 `LAB-TRANSFER`。其后先执行零凭据 precredential：初始环境固定为 Wi-Fi OFF、账号由维护者私有确认 offline、唯一物理有线 UP、TUN OFF、Win-CF SSH 新会话可重连、NAS 恢复路径 idle/自动登录关闭；目标是确认 `ac_id`、CAS HTML、同源登录脚本/RSA 公钥与 credential-provider 边界，必须在读取/提交凭据前停止。只有该诊断通过，才另行进入正式 `password_core`。
+- 每次给维护者的人工命令都必须完整自包含，不得引用“上一轮命令”；每次先列明 Wi-Fi、账号 online/offline、有线、TUN、管理链路、NAS、凭据、产品调用和网络请求预算。Xftp CLI 已证明不可靠，若不能自动上传应直接给出本地绝对可点击路径、文件名、大小、SHA-256 和完整自动验 hash/解包/执行 shell。新 Win-CF SSH 会话必须先给管理员检查命令，再给 `powershell.exe -NoProfile -ExecutionPolicy Bypass` 入口。
+- 当复杂协议诊断难以快速收敛时，可只读检查隔离的旧仓库 `D:\project\Go\IPGW-Meta` 取得已工作协议线索，但不得在旧仓库开发，也不得复制其固定公钥 fallback、宽重定向、凭据/响应日志或其他不安全行为。
 - signed closeout commit `56af8a11ec4de927a66ef00457e7b9f5a08c9501` 经 PR #17 的 CI run `33312284083` 六项与 Native run `33312284095` 七项全部成功后，以普通 merge 合入 main `1d6e9e00992b1b2c245edf452a29cdd5d8b668fd`；merge 双亲、tree `6ef170432ab0670c1251e913e8597c0dedecd509` 与 GitHub 签名均已精确复验，merge 后 CI run `33312524870` 六项与 Native run `33312524845` 七项再次全部成功。main/tag ruleset 与 refs 未漂移，远端 topic branch 保留。
-- BHK 物理有线匿名复核到此关闭，不再重复 `status`。Wi-Fi `status`、`network scan`、认证、login/logout、VM 与网络配置改变均不在本次授权内；若以后选择其中任一方向，先重新核对拓扑、会话状态、Candidate/evidence 边界与具体授权。三个旧对象继续搁置，完成前 [`SEC-HISTORY-001`](../docs/architecture/security.md#sec-history-001历史泄露响应) 与 M0 保持 `in_progress`，且不创建新 release。
-- 已忽略的 topology/status harness 保留供后续授权窗口复用，不暂存、不提交。当前最近安全动作是完成本地文档门禁后暂停；`LAB-DISCOVER` 已以 ZOS `blocked`、BHK Win11 fallback 匿名 parser compatibility `pass` 的分离结论收敛，不得把后者外推为正式 live evidence。
+- BHK 物理有线匿名复核到此关闭，不再重复匿名 `status`。当前 transfer 授权也已随零产品、零网络的成功落盘而关闭；不得自动继续 `password_core`、Wi-Fi `status`、`network scan`、认证、login/logout、VM 或网络配置改变。三个旧对象继续搁置，完成前 [`SEC-HISTORY-001`](../docs/architecture/security.md#sec-history-001历史泄露响应) 与 M0 保持 `in_progress`，且不创建新 release。
+- 已忽略的 topology/status 与 transfer harness 保留供后续工作包复用，不暂存、不提交。`LAB-DISCOVER` 已以 ZOS `blocked`、BHK Win11 fallback 匿名 parser compatibility `pass` 的分离结论收敛；`LAB-TRANSFER` 只证明冻结 Candidate 在 BHK Windows 私有目录中的一致落盘，不得外推为正式 live evidence。
