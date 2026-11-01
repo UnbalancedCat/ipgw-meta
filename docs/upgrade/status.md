@@ -26,6 +26,8 @@ status: approved
 
 ### 2026-11-01 P5 源码准备：symlink 覆盖补齐
 
+最新复核：维护者批准的 8 文件修正已提交/推送为 `0d11f1f`；13 项 CI 中 12 项成功，六平台原生安装全部通过。Windows 全仓测试仍有诊断夹具的路径/超时失败，追加测试修正在本机全仓回归、vet 和独立短路径环境通过，尚待提交及新 CI。未合并、没有新 Candidate；以下首次提交及修正前记录保留。
+
 后续执行：已按批准清单建立 `codex/bhk-v1-acceptance`、提交 `2fc0d1644920a2aefb10a8859e4baebe84cf0501` 并创建 [PR #29](https://github.com/UnbalancedCat/ipgw-meta/pull/29)。首轮 CI 暴露干净检出链接和跨平台测试夹具问题；本地修正及相关回归完成，补充提交和新 CI 尚待完成。首轮失败保持可见，未合并或构建新 Candidate。详情见 [CI 修正记录](../research/p5-readiness-2026-11-01.md#pr-29-与首轮-ci-修正)；下一段保留提交前状态。
 
 五项 Windows symlink 安全测试已通过固定哈希离线测试程序，在原生管理员进程中实际执行并全部 pass；未修改永久权限或真实安装。发布手册中的残留旧矩阵已修正。详情见 [P5 准备记录](../research/p5-readiness-2026-11-01.md)。当前仍在提交/PR 前的审阅检查点，尚无新 Candidate 或 P5 正式证据；正式 password_core blocked/live_unverified、M3 in_progress 保持。下方 P4 的 skip 描述保留为当时记录。

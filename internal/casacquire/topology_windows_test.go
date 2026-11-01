@@ -13,6 +13,10 @@ import (
 // actual interfaces or routes and do not create any network socket.
 func TestNativeTopologyPolicyWithFakeCmdlets(t *testing.T) {
 	fixture := `
+# Load only the inbox module used for JSON/progress in this synthetic fixture.
+# No image-wide module discovery or real network cmdlet loading is required.
+$PSModuleAutoLoadingPreference='None'
+Import-Module ($PSHOME+'\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop
 function Get-NetAdapter { Write-Progress -Activity 'synthetic module progress' -Status 'loading'; [pscustomobject]@{Status='Up';HardwareInterface=$true;InterfaceType=6;ifIndex=5} }
 function Get-NetRoute { [pscustomobject]@{DestinationPrefix='0.0.0.0/0';InterfaceIndex=5} }
 function Get-NetIPAddress { [pscustomobject]@{AddressState='Preferred';SkipAsSource=$false;IPAddress='192.0.2.2'} }

@@ -29,7 +29,13 @@ revision: 2026-08-28-r2
 | macOS 两架构受影响测试、Windows arm64 安装测试编译 | pass；`build/p5-preparation-20261101/ci-fixes-5621da3910f14ef6b407426ce4f66b45/result.json`；仅编译，不冒充原生执行 |
 | 无 ignored build 的源码快照 doccheck | pass；同上 clean-source-doccheck 步骤 |
 
-上述修正尚待补充提交/推送及新 CI；不能用本地通过覆盖首轮远端失败。没有产品行为修改，也没有正式 Candidate 或正式认证证据。合并、Candidate workflow 及真实窗口仍需各自后续授权。
+上述修正已获维护者授权，精确 8 文件提交为 `0d11f1ff4e04a98d1e47a38824ae7804d151c920` 并推送 PR #29。CI run `41270982316`、Native install run `41270982267` 共 13 项中 12 项成功，包含六平台原生安装；Windows 全仓测试仍失败。未合并或创建 Candidate，不能用本地通过覆盖远端失败。
+
+第二轮 Windows 失败涉及诊断测试夹具：严格路径身份校验遇到 CI 临时路径的非规范表示；合成拓扑脚本运行达到现有 15 秒期限。追加修改只在测试中规范化临时路径，并为假 cmdlet 脚本禁用自动模块发现、显式加载所需的 inbox Utility 模块。后者限制合成测试的依赖，不声称证明真实拓扑查询在所有 CI 镜像可用；是否消除远端超时仍待新 CI。生产代码、真实来源、路径/重解析点/硬链接拒绝及超时保持。
+
+追加验证：Windows 全仓普通/诊断/安装测试通过，回执 `build/dev-runs/windows/20261101T041344Z-00f51f7c-test/result.json`；vet 通过，回执 `build/dev-runs/windows/20261101T041715Z-d5006e6d-vet/result.json`。实际短路径 TEMP 的四项包验证独立通过、无 skip，回执 `build/p5-preparation-20261101/short-temp-929a5ced43e941978a48848d114e312c/result.json`。追加测试修改尚待具体清单提交/推送授权。远端结果快照在 `build/p5-preparation-20261101/ci-followup-checks.json`。
+
+PR 的 `behind` 状态来自尚未纳入 main 的 PR #28 合并提交 `dac245947b9bd11b5489e2fd87ca2823c2d2dac5`；该提交与共同祖先 `a14cc291fed335a6b027f42f72a9775f603aa3cd` 的文件树相同，但祖先关系不同。strict checks 要求更新分支后重新验证，不能凭内容相同绕过；本轮未执行该合并。后续合并、Candidate workflow 和真实窗口仍需各自授权。
 
 ## P4 未覆盖项补齐
 

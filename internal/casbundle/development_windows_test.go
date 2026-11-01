@@ -21,7 +21,7 @@ func developmentFixture(t *testing.T) (string, string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir := filepath.Join(t.TempDir(), "payload")
+	dir := filepath.Join(canonicalTempDir(t), "payload")
 	if os.Mkdir(dir, 0700) != nil {
 		t.Fatal("fixture")
 	}

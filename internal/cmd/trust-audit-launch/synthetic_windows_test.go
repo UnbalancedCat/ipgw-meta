@@ -33,7 +33,10 @@ func TestMain(m *testing.M) {
 }
 
 func TestBoundSyntheticAuditChild(t *testing.T) {
-	dir := t.TempDir()
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	payload := filepath.Join(dir, "payload")
 	if os.Mkdir(payload, 0700) != nil {
 		t.Fatal("directory")

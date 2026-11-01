@@ -11,7 +11,7 @@ import (
 func TestContextBundleBindsAllThreeFiles(t *testing.T) {
 	for _, mutation := range []string{"valid", "observed_hash", "missing", "extra", "hardlink", "old_identity"} {
 		t.Run(mutation, func(t *testing.T) {
-			dir := filepath.Join(t.TempDir(), "payload")
+			dir := filepath.Join(canonicalTempDir(t), "payload")
 			if os.Mkdir(dir, 0700) != nil {
 				t.Fatal("mkdir")
 			}

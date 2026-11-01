@@ -25,7 +25,7 @@ func installFixture(t *testing.T) (string, string, string, string, []byte) {
 	}
 	members := archiveFixture(data)
 	z := zipBytes(t, members, zip.Deflate)
-	root := t.TempDir()
+	root := canonicalTempDir(t)
 	source := filepath.Join(root, "source.zip")
 	if err = os.WriteFile(source, z, 0600); err != nil {
 		t.Fatal(err)

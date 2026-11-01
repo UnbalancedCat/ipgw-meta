@@ -11,7 +11,7 @@ import (
 
 func authFixture(t *testing.T) (string, [3]string) {
 	t.Helper()
-	dir := filepath.Join(t.TempDir(), "payload")
+	dir := filepath.Join(canonicalTempDir(t), "payload")
 	if os.Mkdir(dir, 0700) != nil {
 		t.Fatal("fixture")
 	}
@@ -75,7 +75,7 @@ func TestAuthDevelopmentHoldsFilesAndRechecks(t *testing.T) {
 	}
 }
 func TestAuthProfileLockDoesNotReadOrWriteProfile(t *testing.T) {
-	dir := t.TempDir()
+	dir := canonicalTempDir(t)
 	path := filepath.Join(dir, "config.yaml")
 	if os.WriteFile(path, []byte("synthetic-config"), 0600) != nil {
 		t.Fatal("fixture")

@@ -79,7 +79,10 @@ func TestConfirmationControlsSyntheticChild(t *testing.T) {
 		{"explicit", "RUN-ANONYMOUS-ONCE\r\n", "completed", true, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			dir := t.TempDir()
+			dir, err := filepath.EvalSymlinks(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
 			payload := filepath.Join(dir, "payload")
 			if os.Mkdir(payload, 0700) != nil {
 				t.Fatal("fixture directory")

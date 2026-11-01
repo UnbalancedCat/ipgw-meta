@@ -10,6 +10,10 @@ import (
 // All network cmdlets are replaced before the fixed script is evaluated. No
 // host topology, registry, certificate store, profile or network is accessed.
 const fakeTopologyCmdlets = `
+# The fixture needs only inbox Utility cmdlets. Avoid discovering unrelated
+# modules on the CI image; every networking cmdlet below is synthetic.
+$PSModuleAutoLoadingPreference='None'
+Import-Module ($PSHOME+'\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop
 function Get-NetAdapter {
  [pscustomobject]@{Status='Up';HardwareInterface=$true;InterfaceType=6;ifIndex=12;InterfaceGuid='synthetic-wired'}
  [pscustomobject]@{Status='Up';HardwareInterface=$false;InterfaceType=6;ifIndex=22;InterfaceGuid='synthetic-virtual'}

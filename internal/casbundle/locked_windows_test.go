@@ -61,7 +61,7 @@ func diskFixture(t *testing.T) (string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir := filepath.Join(t.TempDir(), "package")
+	dir := filepath.Join(canonicalTempDir(t), "package")
 	if err = os.Mkdir(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
