@@ -9,6 +9,8 @@ revision: 2026-08-28-r2
 
 ## 2026-10-31 当前执行补记：P4 离线交付
 
+2026-11-01 后续交接：维护者已授权并完成精确 344 文件提交、推送及 PR #29 创建，当前分支 `codex/bhk-v1-acceptance`、HEAD `2fc0d1644920a2aefb10a8859e4baebe84cf0501`。首轮 CI 失败定位、修正和两端回归见 [P5 执行记录](../docs/research/p5-readiness-2026-11-01.md#pr-29-与首轮-ci-修正)。下一步为具体补充清单的提交/推送检查点，随后复核新 CI；未授权合并或 Candidate，未执行校园请求。旧分支、旧包及以下历史快照保留。
+
 2026-11-01 开始 `WP-AUTH-CANDIDATE-ACCEPTANCE` 准备：维护者批准先补齐五项 Windows symlink 覆盖、审阅源码和修正文档残留，再准备具体提交/PR/新 Candidate。各 Git mutation、正式 CI 与真实窗口保留明确检查点；终点为验收和 promotion 材料，不签最终 tag、不公开 release。Wi-Fi 使用切网前备齐本地材料的断网交接。当前网络条件不视为未来持续授权；以下 P4 历史交付保留。
 
 同日准备结果：五项 symlink 原生固定测试均 pass，当前发布矩阵已收敛；远端 main 仍是旧 Candidate source、PR #28 已合并。拟提交清单和新 PR 检查点见 [P5 准备记录](../docs/research/p5-readiness-2026-11-01.md)。未提交/推送/合并，未构建 Candidate，未运行校园请求；下一步先审阅具体文件清单。
@@ -269,7 +271,7 @@ Hand off 曾先被 pending composer state 阻止，后因 `No matching saved pro
 - 初始受限账户 `CodexSandboxOffline` 被 Git ownership 检查阻止；经正规工具审批在普通用户上下文完成 Git 核验、fetch 与对齐。未修改 owner、ACL 或 safe.directory。build 回执目录的受限写入也经正规审批解决；没有审批拒绝或未决 mutation。
 - origin fetch/push 均为 `https://github.com/UnbalancedCat/ipgw-meta.git`。仅从既有 origin 获取当前工作分支；确认远端为 `b4eeb760945f0568ca163d957ddd55df2afa86c4`，旧 HEAD `a14cc291fed335a6b027f42f72a9775f603aa3cd` 是其祖先。未查询当前 main、发布状态或 GitHub attestation 有效性。
 - 219 个原有跟踪文件逐项核对 Git 原始 blob 和迁移源清单的 size/SHA256/mode 全部一致；两份 dirty 文档精确匹配上文给定 SHA256，index 无暂存变化。对齐前保存 diff、完整 index、两份原字节副本、refs/status 和全部跟踪文件哈希；临执行再次核对无漂移后使用 `git reset --mixed` 仅对齐引用/index。对齐后 HEAD/upstream 均为 `b4eeb760...`，219 文件字节不变，tracked clean，`git fsck --full` 退出 0。未创建提交、未推送。
-- 独立恢复回执位于 [`build/takeover-bhkdesktop-20261028/`](../build/takeover-bhkdesktop-20261028/)，处于既有 build ignore 范围。新交接是唯一非忽略的未跟踪文件；旧 `agent/handoff.md` 与正式 `docs/upgrade/status.md` 均保留原字节。
+- 独立恢复回执位于 `build/takeover-bhkdesktop-20261028/`，处于既有 build ignore 范围。新交接是唯一非忽略的未跟踪文件；旧 `agent/handoff.md` 与正式 `docs/upgrade/status.md` 均保留原字节。
 - 选定 Candidate 的原始 ZIP 与 14 文件集合共 15 个文件、110327854 bytes，全部只读，raw archive/candidate-manifest/release-manifest SHA256 与交接一致；manifest 12 项大小/hash 和两级 21 条 checksum 引用通过。build-input 字段匹配历史值，但没有重新计算 source build-input，也未重新验证线上 artifact 生命周期/attestation。
 - LOCALAPPDATA 中 dac245 Candidate 四文件闭集与仓库 Candidate manifest、目标产品 hash、helper hash 和三条 transfer checksums 一致，全部只读。未执行任何产品命令。
 - key-provenance R2 目录仍存在，精确三文件为 `ipgw-meta-keyprovenance-windows-amd64.exe`、`run-keyprovenance.ps1`、`TOOL-SHA256SUMS`，全部只读；两个工具的大小分别为 7150080/22374 bytes，SHA256 分别为 `02f3aff22894dc7ca4a32bb24c9af66fa5859dd88ebd04f566641342a7823971` / `c0aeeb6c7f5f7e15055e001434b675d48ad805a7e81aa9ff15e6d0bbb8311859`，与既有 TOOL-SHA256SUMS 一致。安装目录未见独立 JSON manifest；此次只验证现有校验清单的自洽性，没有原始 R2 tar.gz/引导脚本可用于重新建立独立包绑定。未重装、未读脚本正文、未运行 self-test 或真实诊断。
@@ -288,7 +290,7 @@ Hand off 曾先被 pending composer state 阻止，后因 `No matching saved pro
 - 授权边界：只读检查既有工具、明确原件和构建记录，并保存本次审计回执；不修复、安装或运行诊断/self-test/Go 测试，不读 profile/凭据，不启动 WSL，不请求校园网，不提交或推送。规范引用 [REL-LIVEGATE-001](../docs/operations/live-validation.md)、[REL-APPROVAL-001](../docs/operations/release.md)、[EVID-REDACT-001](../docs/evidence/README.md)。
 - 本地核验：R1/R2 三文件及本地 checksums 均一致；R2 runner 内置诊断哈希精确匹配 R1 EXE，不匹配 R2 EXE。静态控制流证明，若更早的前置检查通过，它将在拓扑查询、profile show 和诊断启动之前返回 `diagnostic_invalid`。未执行 runner。
 - 来源链状态：`blocked`。当前安装集合已核验；原始 R2 包、引导脚本、源码/模板、构建与安装自测覆盖记录尚未独立核实，不能确定引入环节。指定本地 build/迁移 payload 文件名检索未找到原件；受支持原任务读取接口返回主机不可用。此状态不改变正式里程碑或认证能力。
-- 结束回执：[`build/r2-source-audit-20261028/audit.json`](../build/r2-source-audit-20261028/audit.json) 保存来源核验表、完整工具哈希、缺口和待审修复范围；这是 ignored 本地审计记录，不是正式 live evidence 或成功摘要。当前安装文件、Candidate 和两份历史快照未修改。
+- 结束回执：`build/r2-source-audit-20261028/audit.json` 保存来源核验表、完整工具哈希、缺口和待审修复范围；这是 ignored 本地审计记录，不是正式 live evidence 或成功摘要。当前安装文件、Candidate 和两份历史快照未修改。
 - 下一步仅由维护者在 BHKLAPTOP 只读核对交接列明的两份原件大小/hash，返回封闭结果后再决定选择性补齐。每次只提供一个完整、自包含步骤；原件不可取得或校验失败继续 `blocked`，不得直接改已安装 runner 哈希或重建冒充原件。
 - 后续材料核验：维护者返回 BHKLAPTOP 两份原件的 metadata_match，大小/hash 精确匹配交接；回执保存为 build/r2-source-audit-20261028/laptop-originals-metadata.json，明确标注为维护者返回，尚未在 BHKDesktop 独立读取原始字节。来源链继续 blocked，待原包成员、bootstrap 和源码/构建记录核验；下一步只选择性接收该两文件到同目录 originals/，不执行。
 

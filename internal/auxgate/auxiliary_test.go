@@ -129,7 +129,12 @@ func TestInstallEnvironmentCannotInheritInjection(t *testing.T) {
 }
 
 func TestWorkRootCannotOverlapSourceOrVolume(t *testing.T) {
-	base := t.TempDir()
+	// macOS exposes temporary directories through /var -> /private/var.
+	// The accepted fixture must be canonical; the production guard still rejects aliases.
+	base, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	repo := filepath.Join(base, "repo")
 	work := filepath.Join(base, "work")
 	inside := filepath.Join(repo, "temp")

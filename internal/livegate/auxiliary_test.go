@@ -4,10 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/netip"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -44,49 +41,6 @@ func TestAuxiliaryClosedSchemaAndCompleteChecks(t *testing.T) {
 		if _, err := DecodeAuxiliary(bad); err == nil {
 			t.Fatal("invalid json accepted")
 		}
-	}
-}
-func TestAuxiliaryPublicationAndCanonicalSummary(t *testing.T) {
-	a := validAuxiliary()
-	a.SummaryID = ""
-	root := bundleTestOutputDir(t)
-	id, err := PublishAuxiliary(context.Background(), root, a)
-	if err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(root, a.CandidateID, id)
-	got, files, err := ReadAuxiliaryBundle(path)
-	if err != nil || got.SummaryID != id {
-		t.Fatal("bundle read", err)
-	}
-	raw, err := PublicSummary(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var summary map[string]any
-	if json.Unmarshal(raw, &summary) != nil || summary["bundle_sha256"] != bundleDigest(files) {
-		t.Fatal("summary")
-	}
-	framed := fmt.Sprintf("SHA256SUMS\x00%d\x00%s\nevidence.json\x00%d\x00%s\nsummary.md\x00%d\x00%s\n", len(files[2]), testHash(files[2]), len(files[0]), testHash(files[0]), len(files[1]), testHash(files[1]))
-	if summary["bundle_sha256"] != testHash([]byte(framed)) {
-		t.Fatal("bundle framing changed")
-	}
-	canceled, cancel := context.WithCancel(context.Background())
-	cancel()
-	if _, err = PublishAuxiliary(canceled, root, a); err == nil {
-		t.Fatal("canceled publication")
-	}
-	entries, _ := os.ReadDir(filepath.Dir(path))
-	for _, entry := range entries {
-		if entry.Name() != id {
-			t.Fatal("canceled bundle residue")
-		}
-	}
-	if err = os.WriteFile(filepath.Join(path, bundleSummaryName), []byte("changed"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = PublicSummary(path); err == nil {
-		t.Fatal("tamper exported")
 	}
 }
 func TestNetworkProjectionRejectsNestedErrorsExtraAddressesAndTruncation(t *testing.T) {

@@ -7,6 +7,30 @@ revision: 2026-08-28-r2
 
 本页为执行记录；路线以 [roadmap](../upgrade/plan.md#roadmap-20261029) 为准，门禁以 [BHK 正式验收](../operations/bhk-acceptance.md) 为准。本阶段终点是同一新 Candidate 的验收及 promotion 材料准备，不创建最终 tag、不公开 release。准备期间未执行校园请求、真实 profile/凭据读取或认证。
 
+## PR #29 与首轮 CI 修正
+
+维护者批准的 344 文件清单已在新分支 `codex/bhk-v1-acceptance` 提交为 `2fc0d1644920a2aefb10a8859e4baebe84cf0501`，并推送、创建 [PR #29](https://github.com/UnbalancedCat/ipgw-meta/pull/29)。原分支及旧包保留；未合并、未启动 Candidate。下方“尚未提交”等段落是此次授权之前的准备快照。
+
+首轮 CI（CI run `41266117777`、Native install run `41266117667`）不能判通过：Linux 普通测试/race、六平台交叉构建、资产打包、Linux 两架构及 macOS 两架构原生安装成功；文档、macOS 普通测试、Windows 普通测试及两架构原生安装失败。失败定位和修正均限于测试/文档：
+
+- 文档检查：旧交接中的两个 ignored build 回执链接在干净检出不存在。保留路径和历史事实，改为本地产物代码文本，不把私有回执纳入仓库或放宽链接检查。
+- macOS：新 livegate 测试引用只在 Linux/Windows 定义的私有文件系统夹具。把三个文件系统用例完整移入相同平台约束文件；纯 schema、进程投影和拓扑测试继续跨平台。v1 发布拒绝在文件系统操作之前验证。
+- macOS：auxgate 接受路径夹具先解析临时目录的系统别名；生产路径检查不变。
+- Windows：管理员进程新建目录可能默认由 Administrators 所有。仅在当前进程为管理员、初始所有者确为该组、且刚创建的测试目录为空时，将夹具所有者设为当前用户；其他情况拒绝。之后仍验证私有 ACL 和所有者，产品安装器不变。
+
+修正后本地验证：
+
+| 检查 | 结果与本地回执 |
+|---|---|
+| Windows P4 测试/vet | pass；`build/dev-runs/windows/20261101T025741Z-9c8cf4b5-p4/result.json` |
+| Linux P4 测试/vet/race/有界 fuzz | pass；`build/dev-runs/linux/20261101T025800Z-ac3e3e03-p4/result.json` |
+| Windows 普通进程安装回归 | pass；`build/dev-runs/windows/20261101T030037Z-21d3eec9-install/result.json`；未选择 Candidate 的 smoke 不计正式验收 |
+| Windows 管理员安装回归 | 四组全部实际 pass、无 skip；`build/p5-preparation-20261101/a092bc24d9a64aba9c3b44fb2ba2132b.install.result.json`；新目录初始 owner 为 Administrators，测试程序 SHA-256 `12a83198e02ffa81136d76601ec10145fdc03395d205fbd31ec3a7ca1b91cdc1`，运行前后相同 |
+| macOS 两架构受影响测试、Windows arm64 安装测试编译 | pass；`build/p5-preparation-20261101/ci-fixes-5621da3910f14ef6b407426ce4f66b45/result.json`；仅编译，不冒充原生执行 |
+| 无 ignored build 的源码快照 doccheck | pass；同上 clean-source-doccheck 步骤 |
+
+上述修正尚待补充提交/推送及新 CI；不能用本地通过覆盖首轮远端失败。没有产品行为修改，也没有正式 Candidate 或正式认证证据。合并、Candidate workflow 及真实窗口仍需各自后续授权。
+
 ## P4 未覆盖项补齐
 
 固定 Go1.25.0 离线编译 internal/config 测试程序，SHA-256 为 `f77b81cc5871a4e5f50b4197f1e39ef9e44eb871d4ada72c422f5ec3989a9bc4`。普通 Unbal 进程的五项测试仍 skip；随后通过 Windows UAC 在同一账户原生管理员进程运行相同字节，五项均实际 run/pass，退出码 0，无超时，程序前后哈希一致：

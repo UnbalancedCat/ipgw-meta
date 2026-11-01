@@ -899,7 +899,16 @@ $u=[Security.Principal.WindowsIdentity]::GetCurrent().User
 $s=New-Object Security.Principal.SecurityIdentifier('S-1-5-18')
 $a=New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')
 $owner=[IO.Directory]::GetAccessControl($p,[Security.AccessControl.AccessControlSections]::Owner).GetOwner([Security.Principal.SecurityIdentifier])
-if($owner.Value -cne $u.Value){throw 'new fixture owner is not current user'}
+# Elevated CI processes can create their own fresh fixture with Administrators
+# as its default owner. Normalize only that case, before creating any contents.
+if($owner.Value -cne $u.Value){
+  $principal=New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+  if($owner.Value -cne $a.Value -or !$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){throw 'unexpected new fixture owner'}
+  if([IO.Directory]::GetFileSystemEntries($p).Length -ne 0){throw 'fixture owner normalization requires an empty directory'}
+  $ownerACL=[IO.Directory]::GetAccessControl($p,[Security.AccessControl.AccessControlSections]::Owner)
+  $ownerACL.SetOwner($u)
+  [IO.Directory]::SetAccessControl($p,$ownerACL)
+}
 $acl=[IO.Directory]::GetAccessControl($p,[Security.AccessControl.AccessControlSections]::Access)
 $acl.SetAccessRuleProtection($true,$false)
 foreach($existing in @($acl.GetAccessRules($true,$false,[Security.Principal.SecurityIdentifier]))){[void]$acl.RemoveAccessRuleSpecific($existing)}
