@@ -10,19 +10,13 @@ import (
 )
 
 var (
-	publicKeyRE = regexp.MustCompile(`(?i)(?:publicKeyStr|publicKey)\s*=\s*["']([A-Za-z0-9+/=]+)["']`)
-	qrUUIDRE    = regexp.MustCompile(`(?i)(?:uuid|qrCodeUUID|qrcode_uuid)\s*[:=]\s*["']([A-Za-z0-9._-]{8,128})["']`)
-)
-
-const (
-	minimumPublicKeyLength = 128
-	maximumPublicKeyLength = 8192
+	qrUUIDRE = regexp.MustCompile(`(?i)(?:uuid|qrCodeUUID|qrcode_uuid)\s*[:=]\s*["']([A-Za-z0-9._-]{8,128})["']`)
 )
 
 // ParsePage discovers the current CAS form, public scripts, QR capability, and
 // active challenge without assuming that those values are protocol constants.
 func ParsePage(base *url.URL, data []byte) (Page, error) {
-	result := Page{Hidden: make(url.Values)}
+	result := Page{Hidden: make(url.Values), SourceURL: base}
 	if base == nil {
 		return result, ErrUnrecognized
 	}
@@ -59,7 +53,6 @@ func ParsePage(base *url.URL, data []byte) (Page, error) {
 		})
 	}
 
-	result.PublicKey = extractPublicKey(data)
 	if match := qrUUIDRE.FindSubmatch(data); len(match) == 2 {
 		result.QRUUID = string(match[1])
 	}
@@ -78,16 +71,4 @@ func ParsePage(base *url.URL, data []byte) (Page, error) {
 		}
 	})
 	return result, nil
-}
-
-func ExtractPublicKey(script []byte) string {
-	return extractPublicKey(script)
-}
-
-func extractPublicKey(data []byte) string {
-	match := publicKeyRE.FindSubmatch(data)
-	if len(match) != 2 || len(match[1]) < minimumPublicKeyLength || len(match[1]) > maximumPublicKeyLength {
-		return ""
-	}
-	return string(match[1])
 }

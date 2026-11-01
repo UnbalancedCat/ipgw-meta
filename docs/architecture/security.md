@@ -5,6 +5,10 @@ revision: 2026-08-28-r2
 
 # 安全边界
 
+P2 独立开发工具的同轮内存会话、私有交互、源码绑定与系统 DNS/PKI 边界见 [开发验证安全约定](../operations/development-validation.md#sec-dev-transport-001产品传输与本地测试路径)。该入口不扩大产品信任、不读取或输出 CTL，也不使历史单次授权续期；本页秘密和 HTTPS 约束仍全部适用。
+
+P3 静态取键使用 [ADR-0021](decisions/ADR-0021-cas-key-use-relation.md) 的有界内存分析；不执行脚本，不使用 Windows 信任诊断或 JS 运行时。来源/关系/结构不完整时在凭据读取前停止，输出不包含 AST、原始错误或公钥。
+
 ## SEC-SECRET-001：秘密定义与禁止落盘
 
 密码、手机号、验证码、Cookie、CAS ticket、TGT、LT、QR payload、原始认证响应和带查询参数的认证 URL 均视为秘密或敏感认证材料。它们不得进入源码、测试 fixture、配置 YAML、launcher 状态、协议缓存、JSON 输出、Observer、普通日志、诊断包或公开 evidence。

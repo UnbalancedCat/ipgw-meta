@@ -377,10 +377,10 @@ class Fixture:
             ],
         ]
         subjects.sort(key=lambda item: item["name"])
-        evidence_ids = [f"EVID-20260830-{index:03d}" for index in range(1, 5)]
+        evidence_ids = [f"EVID-20260830-{index:03d}" for index in range(1, 4)]
         self.evidence_directory = self.repository / "docs" / "evidence" / "releases" / P.VERSION
         self.evidence_directory.mkdir(parents=True)
-        for evidence_id, values in zip(evidence_ids, sorted(P.REQUIRED_EVIDENCE_TUPLES), strict=True):
+        for evidence_id, values in zip(evidence_ids, sorted({("windows-amd64", "bhk_windows", "campus_wired", "password", "password_core"), ("windows-amd64", "bhk_windows", "campus_wifi", "password", "password_core"), ("windows-amd64", "bhk_windows", "campus_wired", "terminal_qr", "terminal_qr")}), strict=True):
             platform, testbed, network_type, auth_method, suite = values
             before, after = (
                 (P.PASSWORD_BEFORE, P.PASSWORD_AFTER)
@@ -388,13 +388,14 @@ class Fixture:
                 else (P.QR_BEFORE, P.QR_AFTER)
             )
             fields = {
-                "schema_version": 1,
+                "schema_version": 2,
                 "plan_id": P.PLAN_ID,
                 "revision": P.REVISION,
                 "evidence_id": evidence_id,
                 "candidate_id": self.candidate_id,
                 "candidate_set_sha256": self.candidate_set_sha256,
                 "source_commit": self.source_commit,
+                "runner_sha256": tool_metrics["test-tools/ipgw-live-gate-windows-amd64.exe"]["sha256"],
                 "platform": platform,
                 "testbed": testbed,
                 "network_type": network_type,
@@ -412,7 +413,7 @@ class Fixture:
         self.notes = self.evidence_directory / "release-notes.md"
         write_file(self.notes, P.RELEASE_NOTES)
         self.lock_value = {
-            "schema_version": 1,
+            "schema_version": 2,
             "plan_id": P.PLAN_ID,
             "revision": P.REVISION,
             "version": P.VERSION,
@@ -437,6 +438,27 @@ class Fixture:
             "evidence_ids": evidence_ids,
             "release_notes_sha256": hashlib.sha256(P.RELEASE_NOTES).hexdigest(),
         }
+
+        for index, (reference, kind, checks) in enumerate([
+            ("installation_summary", "bhk_windows_native_install", ["candidate_verified","fresh_install","three_entry_versions","active_junction_execution","fresh_default_meta","upgrade_preserves_launcher","basic_rollback","private_layout","real_user_path_unchanged","candidate_unchanged"]),
+            ("wifi_summary", "bhk_wifi_network", ["candidate_verified","selected_wifi_topology","list_complete","selected_address_unique","bound_status_valid","scan_scope_valid","scan_complete","selected_result_valid","topology_unchanged","candidate_unchanged"]),
+        ], 1):
+            summary_id = f"AUX-20260830-{index:03d}"
+            auxiliary = {
+                "schema_version": 1, "plan_id": P.PLAN_ID, "revision": P.REVISION,
+                "summary_id": summary_id, "kind": kind, "candidate_id": self.candidate_id,
+                "candidate_set_sha256": self.candidate_set_sha256, "source_commit": self.source_commit,
+                "build_input_sha256": self.build_input,
+                "runner_sha256": tool_metrics["test-tools/ipgw-live-gate-windows-amd64.exe"]["sha256"],
+                "execution_context": "windows_native", "result": "pass",
+                "started_at": "2026-08-30T00:00:00Z", "finished_at": "2026-08-30T00:01:00Z",
+                "checks": [{"name": name, "result": "pass"} for name in checks],
+                "verifier": {"source_tree": self.source_tree, "snapshot_sha256": "a"*64, "go_version": "go1.25.0 windows/amd64", "test_binary_sha256": "b"*64} if index == 1 else None,
+                "bundle_sha256": "c"*64,
+            }
+            raw = P.canonical_bytes(auxiliary)
+            write_file(self.evidence_directory / f"{summary_id}.json", raw)
+            self.lock_value[reference] = {"summary_id": summary_id, "sha256": hashlib.sha256(raw).hexdigest()}
         self.lock = self.evidence_directory / "promotion-lock.json"
         write_file(self.lock, P.canonical_bytes(self.lock_value))
         run_git(self.repository, "add", "--", "docs/evidence/releases/v1.0.0")
@@ -563,6 +585,78 @@ class PromotionVerifierTests(unittest.TestCase):
         with self.assertRaises(P.VerificationError):
             action()
 
+
+    def test_v2_matrix_and_auxiliary_negative_cases(self) -> None:
+        fixture = self.fixture
+        original = {p: p.read_bytes() for p in fixture.evidence_directory.glob("*.json")}
+        def restore():
+            for p, raw in original.items():
+                write_file(p, raw)
+        # Fixed required identities; no optional Wi-Fi QR or NAS substitution.
+        for field, value in [("network_type", "campus_wifi"), ("platform", "linux-amd64"), ("schema_version", 1), ("candidate_id", "wrong"), ("runner_sha256", "e"*64)]:
+            restore()
+            paths = [p for p in original if p.name.startswith("EVID-")]
+            qr = next(p for p in paths if json.loads(original[p])["suite"] == "terminal_qr")
+            v = json.loads(original[qr]); v[field] = value
+            write_file(qr, P.canonical_bytes(v))
+            self.assert_rejected(lambda: P.validate_candidate_root(fixture.candidate, fixture.lock_value, fixture.repository))
+        for ref_name in ("installation_summary", "wifi_summary"):
+            for mutation in ("missing", "tampered", "wrong_type", "wrong_candidate", "failed", "skip", "omitted", "extra", "runner"):
+                restore()
+                lock = json.loads(original[fixture.lock])
+                path = fixture.evidence_directory / (lock[ref_name]["summary_id"] + ".json")
+                if mutation == "missing":
+                    path.unlink()
+                elif mutation == "tampered":
+                    write_file(path, original[path] + b" ")
+                else:
+                    v = json.loads(original[path])
+                    if mutation == "wrong_type": v["kind"] = "other"
+                    if mutation == "wrong_candidate": v["candidate_id"] = "other"
+                    if mutation == "failed": v["result"] = "fail"
+                    if mutation == "skip": v["checks"][0]["result"] = "skip"
+                    if mutation == "omitted": v["checks"].pop()
+                    if mutation == "extra": v["checks"].append(v["checks"][0])
+                    if mutation == "runner": v["runner_sha256"] = "e"*64
+                    raw = P.canonical_bytes(v); write_file(path, raw)
+                    lock[ref_name]["sha256"] = hashlib.sha256(raw).hexdigest()
+                self.assert_rejected(lambda: P.validate_candidate_root(fixture.candidate, lock, fixture.repository))
+        restore()
+        for ids in (fixture.lock_value["evidence_ids"][:2], [fixture.lock_value["evidence_ids"][0]]*3, fixture.lock_value["evidence_ids"]+["EVID-20260830-004"]):
+            lock = dict(fixture.lock_value); lock["evidence_ids"] = ids
+            self.assert_rejected(lambda: P.validate_lock_shape(lock))
+        lock = dict(fixture.lock_value); lock["installation_summary"] = dict(lock["installation_summary"], summary_id="../arbitrary")
+        self.assert_rejected(lambda: P.validate_lock_shape(lock))
+
+    def test_historical_v1_remains_read_only_and_cannot_promote(self) -> None:
+        f = self.fixture
+        lock = {k: f.lock_value[k] for k in P.HISTORICAL_LOCK_KEYS}
+        lock["schema_version"] = 1
+        lock["evidence_ids"] = [f"EVID-20260830-{i:03d}" for i in range(1,5)]
+        lock["release_notes_sha256"] = hashlib.sha256(P.HISTORICAL_RELEASE_NOTES).hexdigest()
+        matrix = sorted({("linux-amd64","nas_vm","campus_wired","password","password_core"),("linux-amd64","nas_vm","campus_wired","terminal_qr","terminal_qr"),("windows-amd64","bhk_windows","campus_wired","password","password_core"),("windows-amd64","bhk_windows","campus_wifi","password","password_core")})
+        template = json.loads((f.evidence_directory / f.lock_value["evidence_ids"][0]).with_suffix(".json").read_bytes())
+        for eid, values in zip(lock["evidence_ids"], matrix, strict=True):
+            v = {k: template[k] for k in P.HISTORICAL_EVIDENCE_KEYS}
+            v.update(schema_version=1, evidence_id=eid)
+            for k,value in zip(("platform","testbed","network_type","auth_method","suite"),values,strict=True): v[k]=value
+            v["capability_before"],v["capability_after"]=(P.PASSWORD_BEFORE,P.PASSWORD_AFTER) if v["suite"]=="password_core" else (P.QR_BEFORE,P.QR_AFTER)
+            write_file(f.evidence_directory/(eid+".json"),P.canonical_bytes(v))
+        write_file(f.lock,P.canonical_bytes(lock));write_file(f.notes,P.HISTORICAL_RELEASE_NOTES)
+        before={p:p.read_bytes() for p in f.evidence_directory.iterdir()}
+        P.audit_history(f.lock,f.notes)
+        self.assertEqual(before,{p:p.read_bytes() for p in before})
+        self.assert_rejected(lambda:P.validate_lock_shape(lock))
+        qr=f.evidence_directory/(lock["evidence_ids"][1]+".json")
+        v=json.loads(qr.read_bytes());v["platform"]="windows-amd64";v["testbed"]="bhk_windows";write_file(qr,P.canonical_bytes(v))
+        self.assert_rejected(lambda:P.audit_history(f.lock,f.notes))
+
+    def test_release_notes_match_current_specification(self) -> None:
+        document = (SCRIPT.parent.parent / "docs/operations/release.md").read_text(encoding="utf-8")
+        start = document.index("```text\n# IPGW-Meta v1.0.0") + len("```text\n")
+        end = document.index("\n```", start)
+        self.assertEqual((document[start:end] + "\n").encode("utf-8"), P.RELEASE_NOTES)
+
     def test_complete_happy_path(self) -> None:
         fixture = self.fixture
         lock = P.validate_lock(
@@ -609,8 +703,8 @@ class PromotionVerifierTests(unittest.TestCase):
         fixture = self.fixture
         raw = fixture.lock.read_bytes()
         duplicate = raw.replace(
-            b'{"schema_version":1,',
-            b'{"schema_version":1,"schema_version":1,',
+            b'{"schema_version":2,',
+            b'{"schema_version":2,"schema_version":2,',
             1,
         )
         duplicate_path = fixture.root / "duplicate-lock.json"

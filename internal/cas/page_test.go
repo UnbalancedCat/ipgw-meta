@@ -32,8 +32,9 @@ func TestParsePageDiscoversDynamicValues(t *testing.T) {
 	if page.Hidden.Get("lt") != "synthetic-form-state" || page.Hidden.Get("execution") != "e1s1" {
 		t.Fatalf("required hidden fields were not discovered")
 	}
-	if page.PublicKey != publicKey || ExtractPublicKey([]byte(`publicKey='`+publicKey+`'`)) != publicKey {
-		t.Fatalf("dynamic public key was not discovered")
+	inline, external, err := KeySources(base, html)
+	if err != nil || len(inline) != 1 || len(external) != 2 {
+		t.Fatal("script coverage")
 	}
 	if page.QRUUID != "synthetic-qr-id" || !page.QRSupported || len(page.Scripts) != 2 {
 		t.Fatalf("QR metadata or scripts were not discovered")
@@ -47,10 +48,7 @@ func TestParsePageRejectsMissingBaseAndOversizedKey(t *testing.T) {
 	if _, err := ParsePage(nil, []byte(`<html></html>`)); err != ErrUnrecognized {
 		t.Fatalf("ParsePage(nil) error = %v", err)
 	}
-	tooLarge := []byte(`publicKey='` + strings.Repeat("A", 8193) + `'`)
-	if key := ExtractPublicKey(tooLarge); key != "" {
-		t.Fatalf("oversized public key was accepted")
-	}
+
 }
 
 func TestParsePagePreservesDuplicateNamedControlsForCallerValidation(t *testing.T) {

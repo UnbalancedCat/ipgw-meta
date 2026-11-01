@@ -198,6 +198,20 @@ func setBundleCurrentUserOnlyACL(path string, inheritance uint32) error {
 	if err != nil {
 		return err
 	}
+	descriptor, err := windows.GetNamedSecurityInfo(path, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION)
+	if err != nil {
+		return err
+	}
+	existingOwner, defaulted, err := descriptor.Owner()
+	if err != nil || existingOwner == nil {
+		return ErrEvidenceDurability
+	}
+	security := windows.SECURITY_INFORMATION(windows.DACL_SECURITY_INFORMATION | windows.PROTECTED_DACL_SECURITY_INFORMATION)
+	var owner *windows.SID
+	if defaulted || !existingOwner.Equals(user.User.Sid) {
+		security |= windows.OWNER_SECURITY_INFORMATION
+		owner = user.User.Sid
+	}
 	entries := []windows.EXPLICIT_ACCESS{{
 		AccessPermissions: windows.GENERIC_ALL,
 		AccessMode:        windows.GRANT_ACCESS,
@@ -215,9 +229,8 @@ func setBundleCurrentUserOnlyACL(path string, inheritance uint32) error {
 	return windows.SetNamedSecurityInfo(
 		path,
 		windows.SE_FILE_OBJECT,
-		windows.OWNER_SECURITY_INFORMATION|
-			windows.DACL_SECURITY_INFORMATION|windows.PROTECTED_DACL_SECURITY_INFORMATION,
-		user.User.Sid,
+		security,
+		owner,
 		nil,
 		acl,
 		nil,

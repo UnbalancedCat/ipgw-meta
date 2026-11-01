@@ -5,7 +5,11 @@ revision: 2026-08-28-r2
 
 # 协议正确性规范
 
+P2 [产品等价开发验证](../operations/development-validation.md) 复用本页定义的 SDK 流程。匿名 `credential_boundary_reached` 不表示 RSA 有效或登录成功；开发 password 回执仍按本页账号状态闭环判定，但不替代正式 Candidate evidence。P2 不改变本页取键、表单、ticket 或成功语义。
+
 ## PROTO-DISCOVERY-001：发现优先
+
+- 2026-10-30 取键契约按 [ADR-0021](decisions/ADR-0021-cas-key-use-relation.md)：完整检查允许来源，以有限局部登录使用关系选择 RSA 公钥；不得用注释、裸赋值、首个文本匹配或脚本次序选键。不同合格键、读取/解析不完整或预算失败在读取凭据前拒绝；相同 RSA 模数与指数可合并。此前仅裸赋值的成功夹具不再代表支持的认证页面。
 
 - 每次认证动态解析 CAS form action、`lt`、`execution`、公开登录脚本和 RSA 公钥。
 - CAS RSA 公钥只接受本次认证从官方同源 HTTPS 页面或公开登录脚本动态发现的 PKIX／PKCS#1 RSA，模数范围为 512–8192 位；不得固定、缓存或使用历史 fallback。RSA PKCS#1 v1.5 只编码 UTF-8 `username + password` 协议字段，明文必须不超过 `key_size_bytes - 11`；超长、畸形、非 RSA 或越界密钥均在 CAS POST 前返回 `protocol_changed`，不得截断、改发明文或降低 TLS。该兼容边界见 [`ADR-0014`](decisions/ADR-0014-cas-rsa-compatibility-envelope.md)。
@@ -49,6 +53,8 @@ status、activation 和 logout 必须使用 HTTPS；禁止 `InsecureSkipVerify`�
 ## PROTO-LOGOUT-001：幂等注销
 
 Logout 在原本离线时返回成功结果 `AlreadyOffline`；在线时必须检查 HTTPS 响应、网关业务结果并复核离线状态。不得仅因请求发出或返回 2xx 宣告成功。
+
+按 [ADR-0024](decisions/ADR-0024-logout-explicit-callback.md)，在线注销GET在既有action与username之外显式发送固定 `callback=ipgw_logout`，请求可被现有解析器接受的表示格式。只增加该参数，不增加ip/ac_id、浏览器Cookie/header、CAS退出或重试。严格JSON/JSONP对象、整数ecode及可选success一致性检查和最终offline复核保持；callback不执行JavaScript，也不改变已有裸JSON兼容或回调语法。该候选修复是否解决真实封装差异仍以独立开发窗口为准。
 
 ## PROTO-IO-001：网络边界
 

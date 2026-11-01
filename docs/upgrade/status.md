@@ -16,6 +16,243 @@ status: approved
 | M3 v1 候选与稳定发布 | in_progress | 自动化门禁、跨平台构建、校园网人工验收 | [发布](../operations/release.md)、[证据](../evidence/README.md) |
 | 1.x 后续功能迁移 | not_started | 会话 → 套餐/当前用量 → 历史用量/账单/充值 | [迁移矩阵](migration-matrix.md) |
 
+<a id="status-20261029"></a>
+
+## 2026-10-29 当前摘要：认证收敛路线
+
+本摘要是当前状态入口；下方 8 月至 9 月日期明确的快照及其“当前/下一步”原文保留，只表示当时状态。当前执行交接位于 [BHKDesktop 交接](../../agent/handoff-bhkdesktop-2026-10-28.md)，原 `agent/handoff.md` 保持历史用途。后续顺序以[当前 roadmap](plan.md#roadmap-20261029)为准，不重做迁移、环境初始化或历史 RC-BUILD。
+
+<a id="status-20261031-p4"></a>
+
+### 2026-11-01 P5 源码准备：symlink 覆盖补齐
+
+五项 Windows symlink 安全测试已通过固定哈希离线测试程序，在原生管理员进程中实际执行并全部 pass；未修改永久权限或真实安装。发布手册中的残留旧矩阵已修正。详情见 [P5 准备记录](../research/p5-readiness-2026-11-01.md)。当前仍在提交/PR 前的审阅检查点，尚无新 Candidate 或 P5 正式证据；正式 password_core blocked/live_unverified、M3 in_progress 保持。下方 P4 的 skip 描述保留为当时记录。
+
+### 2026-10-31 P4 离线交付完成
+
+维护者已批准的 [ADR-0025](../architecture/decisions/ADR-0025-bhk-formal-acceptance.md) 和 [P4 契约](../operations/bhk-acceptance.md) 已完成实现与离线验收。当前源码中的正式认证 evidence/公开摘要/promotion lock 使用 v2：三组 BHK 认证加两项独立辅助摘要；v1 只在显式历史审计入口读取。Candidate/release manifest 仍为 v1，旧 Candidate 不得搭配新 helper。
+
+Windows 全仓测试、vet、原生安装/junction 回归与专项检查，Linux 全仓测试/race/vet、有界 fuzz、质量门禁，以及六平台三入口构建和产品依赖隔离均通过。安装失败定位于测试夹具的所有者写入/继承 ACL 准备；修复限定于私有测试目录，没有绕开 junction 或放宽安装契约。五项 Windows symlink 特权用例仍因环境限制 skip，不能称为已覆盖；普通全仓测试的 Candidate 安装 smoke 未选 Candidate 而 skip，正式辅助入口则强制 Candidate、拒绝 skip。详见[完整交付与缺口](../research/p4-bhk-gates-2026-10-31.md)。
+
+下一工作包为 P5：后续授权的受保护 main/正式 CI、新不可变 Candidate、BHK 原生安装辅助记录、Wi-Fi 辅助窗口及三组正式认证。P4 没有执行校园请求、真实 profile/凭据读取、Candidate 构建、提交、推送或发布。正式 password_core 保持 blocked/live_unverified，M3 保持 in_progress；本节不授予 P5 操作权限，下方日期明确的历史状态保留。
+
+<a id="status-20261031-password-dev-pass"></a>
+
+### 2026-10-31 P3 有线开发password_core完整闭环通过
+
+维护者在私有终端执行新callback包的一次授权窗口，回传schema3结果。严格解码、五项包哈希、211项源码快照及当前源码一致性核验通过；只保存白名单JSON，未保存终端账号提示。证据见 `build/logout-callback-live-20261031/`，source `a396e11e95ec9705b03a2a19527de7070e9735bdca6151199a2cf611c6569669`。这是真实开发验证：执行者为分别绑定的独立observed CLI，不是普通产品同一EXE，也不是Candidate evidence。
+
+七个主步骤全部pass：初始offline、login LoggedIn、独立status online、重复login AlreadyOnline、logout LoggedOut、独立最终status offline、重复logout AlreadyOffline。8个product_commands包含前置profile show；无cleanup命令。最后一次logout只发送status，不重复发出注销请求。回执证明该窗口结束时offline，不代表此后的持续账号状态。
+
+登录轨迹包含CAS POST302、activation200及身份状态复核。首次注销是status200、logout200、status200；正文完整读取，envelope=jsonp_object、ecode=integer_zero、success=missing、parser=accepted_success，随后原有offline判据通过。全部observations共18次应用RoundTrip；旧内层匿名计数为0是password模式未采集，不是零网络，不覆盖操作系统DNS/PKI流量。
+
+与前次失败包相比，产品实现只有固定callback参数变更；本轮支持该候选修复在目标场景有效。没有获得旧other正文，不能把前后两个不同窗口当作全部服务端因果的严格控制实验。未放宽业务判据、导入浏览器会话或新增CAS退出。
+
+本次单次授权已消耗，Agent未重跑。P3的BHK有线开发闭环已取得通过证据；正式password_core仍blocked / live_unverified，M3仍in_progress，旧不可变Candidate不含这些开发修复。下一工作包应收敛P4的BHK正式验收规范、evidence/runner/promotion一致性，随后经P5流程产生并验收新Candidate；不继续重复Chrome/CTL或同包认证。Wi-Fi、terminal QR、Windows原生安装/junction、Linux/macOS原生认证等既有缺口保持。
+
+<a id="status-20261031-logout-callback"></a>
+
+### 2026-10-31 P3 注销callback候选修复离线交付
+
+维护者已批准 [ADR-0024](../architecture/decisions/ADR-0024-logout-explicit-callback.md)。共享注销只新增固定callback请求参数，原严格JSON/JSONP、ecode/可选success、最终offline和幂等判据保持；不复制浏览器会话、不新增IP/ac_id、CAS退出或额外请求。网页材料与因果限制见[研究记录](../research/logout-browser-context-2026-10-31.md)：现有解析器已能接受网页封装，callback是待真实验证的候选修复，不能宣称唯一根因已经证明。
+
+Windows聚焦SDK、auth-dev相关测试/vet、整链self-test及八项构建绑定审计通过；Linux相关测试/race/vet、三项有界fuzz和纯解析包race通过；六平台三个产品入口构建及诊断依赖隔离通过。汇总及失败记录保留在 `build/p3-logout-callback-20261031/`。最初两个聚焦失败来自新增夹具对空Body表示和既有用户名白名单的错误假设；已在测试层纠正，未更改产品边界。未重跑全仓安装门禁；Windows原生安装/junction缺口保持，macOS仅为交叉构建。
+
+最终包 `build/dev-runs/windows/20261031T081905Z-d60ad4f5-auth-dev/ready/`，入口auth-dev-launch.exe；source `a396e11e95ec9705b03a2a19527de7070e9735bdca6151199a2cf611c6569669`，普通产品SHA-256 `3bb73e3da91e2d0bb4273b8939f0d6e0cf42d0f1bb98f3992b89efbd6e63f73d`，独立observed CLI SHA-256 `43f90dd275e22c4415d7776cf7f6998b98ce1aec968049e9cfda6329af4966d9`。211项源码快照与当前源码一致，五项哈希通过；相对前包只有auth.go及三份测试变化。外层schema3、子进程schema2不变，普通产品与观察EXE分别绑定。
+
+本轮只执行合成/回环及零网络自检，没有读取真实profile/密码、操作Chrome或执行校园登录注销，也未运行真实拓扑preflight。下一步是另行确认的原生Windows私有终端password_core单次窗口；成功也只属于开发证据。正式password_core仍blocked / live_unverified，M3仍in_progress；旧包、Candidate和历史回执保持，未提交、推送或发布。
+
+<a id="status-20261031-logout-envelope"></a>
+
+### 2026-10-31 P3 新观察包真实回执：注销封装不匹配
+
+维护者在私有终端确认单次窗口并执行 source `a4ef40dfb8dc66afa3db1b8f6832c7139008200d1ea74c62a7a9fc6a55a1cce2`。新 schema 3 回执严格解码通过，五项包哈希、210项原包源码快照和13项当前解码相关源码一致；仅保存闭集 JSON，不保存终端账号提示。证据在 `build/logout-observation-live-20261031/`，属于开发证据，不是 Candidate evidence。
+
+登录、独立 online 和重复登录 AlreadyOnline 再次通过；首次注销 HTTP200 后返回 protocol_changed，SDK分类为 logout_response_parse。新增观察为 read=complete、envelope=other、structure=none、bom=absent：正文已完整读取，没有触发体积拒绝；未进入当前支持的 JSON 对象或简单 callback JSONP 对象入口，起始没有 UTF-8 BOM。不能将 other 写成 HTML、纯文本或具体成功标记，也不能把 structure=none 理解为对未知封装已验证有效。
+
+字段 ecode/success 等及 parser 全为 unknown，表示观察器没有在支持的对象封装上做字段或业务投影，不表示字段缺失；SDK本身的业务解析拒绝由固定错误分类独立确认。当前不能依据这份回执新增响应成功白名单或放宽 PROTO-LOGOUT-001。
+
+整套 password_core 仍 fail。cleanup_logout 仅有 status 请求、无第二次 logout 请求，最终 cleanup_status_offline 通过；正常第二次注销和正常最终状态步骤仍未完成。本窗口结束时观察到 offline，不代表后续持续状态。17条已记录 transport 调用不等于 OS DNS/TCP 流量；密码模式中的旧匿名计数字段为零不表示零请求。
+
+此次单次真实授权已消耗。离线核对已确认当前与旧版的 HTTPS 端点、GET、action/username 键相同，均未请求 callback；旧版不解析业务正文，不能提供新成功契约。Referer、UA和前置步骤有差异，但没有证据证明其决定本轮响应格式。下一步仍需建立实际封装及其业务含义的依据，再形成最小修复或新的明确观察决定；不重复相同包、不保存原始响应、不因随后 offline 而绕过业务结果。正式 password_core blocked/live_unverified、M3 in_progress 和 Windows 安装/junction 缺口保持。
+
+<a id="status-20261031-logout-observation"></a>
+
+### 2026-10-31 P3 注销结构观察离线交付
+
+维护者已确认 [ADR-0022](../architecture/decisions/ADR-0022-development-logout-structure.md)。独立 observed CLI 已实现仅注销响应的有界内存结构投影、固定 SDK 失败分类和严格新旧版本解码；普通产品注销业务成功与最终 offline 判据不变。旧回执不补造新字段，真实响应未采集。
+
+最终开发包为 `build/dev-runs/windows/20261031T024632Z-b3a7065a-auth-dev/ready/auth-dev-launch.exe`，source `a4ef40dfb8dc66afa3db1b8f6832c7139008200d1ea74c62a7a9fc6a55a1cce2`；210项源码与五项包哈希一致。普通产品 SHA-256 为 `a7b52e8e9d7d28d2ca6fd0cb8fdd4a3a11111c3dd3b0e47628868a3bd1ebb946`，与前次开发登录成功包相同；观察 EXE 和启动器是新身份。整链零网络自检、合成 profile、缺失/额外/篡改文件拒绝和历史 v2 / 新 v3 回执解码通过。修复前中间包保留但不是本次交付入口。
+
+Windows 专项、普通/诊断测试和 vet 通过；Linux 普通测试、全仓 race、vet、有界 fuzz 通过，六平台三入口产品构建及诊断依赖隔离通过。Windows 安装测试仍有既知 fresh install/upgrade 和 rollback junction 失败，未修改 ACL 或放宽期望；macOS 交叉构建不是原生认证验收。完整命令、结果、失败与跳过见 `build/logout-observation-p3-20261031/REPORT.md`。
+
+下一步是另行授权后的私有终端 password_core，利用新包区分首次注销失败层。没有读取真实 profile/密码、运行校园请求、重试历史窗口、创建 Candidate、提交或发布。开发套件真实闭环仍未通过，正式 password_core 维持 blocked/live_unverified，M3 维持 in_progress。
+
+<a id="status-20261031-password-progress"></a>
+
+### 2026-10-31 P3 开发登录通过，注销响应处理仍失败
+
+维护者确认 TUN 关闭、有线独占、初始 offline 后，在私有终端完成修复包 source `67985fe2d2a580608d81504565cae172e594eb60222aeebca8d11f1305aa43e0` 的一次 password_core。脱敏回执严格解码和原包哈希匹配，规范化转录见本地 `build/auth-key-relation-live-20261031/`。
+
+初始 offline、首次登录、独立 online 状态和重复登录 AlreadyOnline 均通过。CAS POST 为302，activation为200，SDK与状态机共同确认开发登录成功。首次 logout 收到200但返回 protocol_changed，整套开发验证为fail；随后 cleanup_logout 只查状态即成功，最终cleanup_status_offline通过。正常第二次注销及最终状态步骤没有完成，清理不能替代套件验收。
+
+当前失败定位在注销响应处理；现有回执不能区分正文超限与业务解析拒绝，也不能推断实际 ecode 表示。新增合成状态转换回归通过，不改变产品成功判据。下一步设计完整闭集注销结构观察，涉及新的正文投影先确认，不直接放宽parser。
+
+正式 password_core 仍 blocked/live_unverified，M3 in_progress；P3已有开发登录成功证据，但整套闭环未通过。Windows安装/junction缺口继续保留。此次单次真实授权已消耗，后续没有新的网络操作，旧包及历史失败记录保持。
+
+<a id="status-20261030-key-relation"></a>
+
+### 2026-10-30 P3 登录使用关系修复离线交付
+
+按 [ADR-0021](../architecture/decisions/ADR-0021-cas-key-use-relation.md) 实现共享动态选择器，完整检查允许来源，以有限局部使用关系与 RSA 身份唯一性选键。合成注释诱饵、冲突、来源失败与实际 POST 解密回归通过；这尚不证明真实 HTTP 500 已消除。产品不再使用旧正则，旧诊断包/回执不改写，新构建匿名真实入口停用。
+
+Windows/Linux 专项普通、race（Linux）、vet、有界 fuzz、六平台产品依赖隔离/构建，以及独立 auth-dev 密码开发包整链自检和绑定校验已通过。204 项源码快照与当前文件一致，source `67985fe2d2a580608d81504565cae172e594eb60222aeebca8d11f1305aa43e0`。详细检查与限制见本地 `build/p3-key-relation-20261030/REPORT.md` 和 `final-checks.json`；旧失败记录保留。
+
+Windows 普通与诊断全仓测试通过，独立安装器 fresh/rollback junction 执行失败仍未闭合，不能声明整仓全绿。没有六平台原生认证证据。维护者现已开启 TUN 并登录用于远程管理，本轮不运行现场 preflight 或真实认证，不自动恢复 offline。
+
+下一步为准备测试现场后另行授权修复包的 password_core；密码只在维护者私有终端输入。正式 password_core 仍 blocked/live_unverified，M3 in_progress，P3 真实闭环未完成，P4/P5 未推进。
+
+### 当前身份与证据等级
+
+| 身份 | 值 | 本摘要的依据与限制 |
+|---|---|---|
+| 权威工作区 | BHKDesktop `D:\project\Go\IPGW-Meta` | Windows 原生开发/验证与同机 Ubuntu WSL 离线开发；不依赖笔记本传输。 |
+| 开发分支 / HEAD | `codex/cas-submit-field-closure` / `b4eeb760945f0568ca163d957ddd55df2afa86c4` | 本次只读 Git 核验；存在后续未提交开发与文档改动，均保留。 |
+| PR #28 开发 head | `a14cc291fed335a6b027f42f72a9775f603aa3cd` | 迁移交接支持的历史身份；本次未重新查询远端 PR。 |
+| Candidate source | `dac245947b9bd11b5489e2fd87ca2823c2d2dac5` | 不等于开发 HEAD 或 PR head。 |
+| 不可变 Candidate | `v1.0.0-dac245947b9b-33738413131.1` | 历史构建/安装/attestation 门禁通过由交接支持；本次未重建、复跑安装或在线复验 attestation。 |
+
+不得把当前工作区开发字节标为既有 Candidate，也不能因构建门禁通过宣布真实登录成功。旧段落中的 `fbce605…`、“尚无 Candidate”及“下一步 RC-BUILD”已由后续交接覆盖，不是当前行动依据。
+
+### 已完成与仍未闭合
+
+| 事项 | 当前状态与实际含义 |
+|---|---|
+| 本机开发环境 | Windows 与 Ubuntu WSL 的固定 Go 1.25.0、独立缓存/产物和重复执行入口已建立。原生回执及后续开发报告支持 Windows 普通测试/vet/doccheck、Linux 普通测试/race/vet/doccheck/质量门禁与六平台开发构建通过；不是本次重跑结果，也不等于六平台本机认证验收。 |
+| 历史 Candidate 与安装 | 历史 RC-BUILD、六平台安装及相关绑定检查已完成；原件和安装保留，正式登录门禁未随之通过。 |
+| 正式 password_core | 仍为 `blocked`，password 能力保持 `synthetic_covered + live_unverified`；没有目标账号真实登录闭环通过证据。 |
+| CAS-submit R3 | 交接记载六字段 POST 收到 HTTP 500，`login_succeeded=false`；诊断分类 `pass` 不表示登录成功。该结果来自插桩诊断，不是 Candidate live-gate 通过。 |
+| key-provenance R1 | 交接记载零个通用 publicKey、两个不同 publicKeyStr；排除该窗口的“通用 publicKey 抢先匹配”假设，尚未证明实际用于加密的键，也未证明它导致 HTTP 500。 |
+| 历史 key-provenance R2 | 原包已存在 runner 内置 R1 哈希与 R2 EXE 不配对的问题；具体生成环节未知，真实 R2 校园运行没有执行证据。保留原件与结果，不作为新开发阻塞，不再默认继续旧来源追查。 |
+| D4–D15 | 诊断实现、合成验证与若干本地/匿名窗口已有记录；D15 仍 `collection=blocked`，references/resources 为空，未取得 CAS 页面与取键事实。该专项退出默认主线，不再作为修复产品认证的预设前置。 |
+| 后续验收与发布 | Wi-Fi password、Terminal QR 正式闭环、完整发布矩阵及 promotion/release 没有完成证据；不能由开发测试或诊断观察代替。 |
+
+上表历史认证详情引用迁移交接及其后追加记录，本次未读取旧聊天、私有 evidence bundle 或原始响应，因此不是原始证据复验。D15 的本地脱敏说明在 `build/desktop-dev-20261028/D15-LIVE-RESULT.md`；其 JSON 为 PTY 输出的规范化转录，明确不是字节精确 stdout。一次真实授权已经消耗。
+
+D15 的 AuthRoot `any_match` 与 Disallowed `no_match` 仅为限定集合的成员观察，不能推出完整信任、最新性、吊销政策或某一指定末端证书的结论。受限诊断使用显式 ROOT 池，产品 Windows 默认系统验证路径与之不同；此静态差异既不证明产品 TLS 必败，也不证明必然可用。
+
+### 里程碑与下一工作包
+
+M1/M2 保留历史完成状态；若后续复现缺陷影响相应门禁，按证据重开对应工作包，不预先抹除历史验收。M3 继续 `in_progress`；M0 残余治理继续 `in_progress`，按 [ADR-0011](../architecture/decisions/ADR-0011-nonblocking-m0-governance.md) 不单独阻塞发布状态门禁。
+
+P0 文档收敛已完成，回执位于 `build/roadmap-docs-20261029/`；其交付窗口没有启动 P1。维护者随后要求开始，P1 `WP-AUTH-BASELINE` 已完成本地只读研究，交付 [旧版/v1 行为矩阵与判别假设](../research/auth-baseline-2026-10-29.md)，回执位于 `build/auth-baseline-p1-20261029/`。此完成仅指源码研究退出条件满足，不表示真实根因或认证闭环已解决。
+
+P1 确认默认系统 TLS/直接 IPv4、RSA 主封装与六字段集合存在共同点；差异集中在门户预访问/会话边界、UA、页面与脚本取键、form/action/service 和后续 ticket/activation。当前仍无法由这些差异断定 HTTP 500 根因。P1 交付后维护者要求实施 P2；下面记录其后续执行，不改变 P1 窗口范围。
+
+### 2026-10-29 P2 开发路径交付
+
+P2 `WP-AUTH-VALIDATION-PATH` 的实现与专项离线验收已完成，契约见[开发验证](../operations/development-validation.md)及 accepted [ADR-0017](../architecture/decisions/ADR-0017-development-auth-validation.md)。匿名模式直接复用 SDK 与同轮内存 CAS 会话，在 provider 边界停止；password 模式使用同快照开发产品、现有七步状态机和私有 prompt。产品认证实现、公共接口和正式四组门禁没有改变；新规则只适用于独立开发工具。
+
+- 最终包：`build/dev-runs/windows/20261029T152626Z-bfab731e-auth-dev/ready/`；source digest `6a6f6312d7d930a711f4a19fcd6969d68b30392824ac1f5e8579d27284a086df`，163 文件源码快照。启动器自检、产品/观察程序/构建输入绑定和六种完整/篡改场景通过。产品标记 `dev-auth-local`，不是 Candidate。
+- Windows P2 测试/livegate 回归/vet 与 Linux P2 测试/race/vet/有界 fuzz 通过；Linux 全仓 race、两端全仓 vet、六平台共 18 个产品构建及依赖隔离通过。完整命令、结果和范围见 `build/auth-validation-p2-20261029/REPORT.md`。
+- **Windows 全仓基线未全绿**：当前源码与诊断组通过，安装器的 fresh/upgrade 与三个 rollback 场景经 junction 启动失败，实际目标路径执行成功。正式工具审批与 WSL 官方 Windows interop 中均可复现；本轮没有证明具体环境根因，没有放宽测试、修改安装器或权限。这是保留的安装回归/执行环境缺口，不用历史通过覆盖本轮失败。
+- 修正开发测试入口的包枚举：根包、`cmd/`、`internal/` 是当前源码范围，`build/` 中无 go.mod 的历史扫描副本不参与当前测试。旧副本和首次失败日志保留，未删除测试求通过。
+- 本轮只执行合成/loopback 测试、构建、文档与脱敏检查；未执行真实匿名/password 模式、本地真实 profile 或 CTL 读取，也未提交、推送、构建 Candidate 或发布。开发登录与正式 `password_core` 均无新增真实成功证据。
+
+后续主线为 P3：先另行授权一次产品等价匿名观察，区分 SDK 默认系统 TLS、会话与动态取键/表单上下文，再决定证据支持的最小修复或私有开发 password 窗口。真实选键关系和 HTTP 500 根因仍未知，不能预选首键/第二键。Windows 安装回归缺口继续单独跟踪；P4 正式矩阵尚未迁移，M3 与 password `live_unverified` 不变。
+
+<a id="status-20261030-anonymous"></a>
+
+### 2026-10-30 产品等价匿名观察
+
+维护者新的单次授权及现场条件确认后，Agent 在 BHKDesktop Windows PTY 执行已绑定 P2 包一次；source `6a6f6312d7d930a711f4a19fcd6969d68b30392824ac1f5e8579d27284a086df`，启动/结束绑定 verified，退出码 0。闭集回执及解释位于 `build/auth-anonymous-20261030/`，JSON 为 PTY 规范化转录，不冒称字节精确原始 stdout。
+
+结果为 `observed / credential_boundary_reached`：6 次应用请求（status 1、discovery 2、CAS 3），本轮 CAS Cookie 已接收并回送，页面已观察，SDK 候选公钥来源为 script，动态 action 的 service 与入口相同，产品命令 0。产品默认系统 TLS 与前置会话在这个窗口能够走通；D 系显式信任池的历史失败不能据此继续作为产品无法访问 CAS 页面的前置阻塞。
+
+provider 边界早于 RSA 解析/加密与 CAS POST。本次未观察键数量/值或实际浏览器选键关系，不能与历史两键做值级比对，也未解释历史 HTTP 500。service 相同不等于完整 action URL 相同；应用计数不等于系统 DNS/TCP 总量。未读取 profile/密码、未进入 POST/activation/logout，没有额外状态请求或自动重试。
+
+下一步为另行批准的私有开发 password_core 验证；本次授权已消耗。正式 password_core 仍 blocked，password 仍 `synthetic_covered + live_unverified`，M3 不变。未创建 Candidate、提交、推送或发布。
+
+### 2026-10-30 私有开发 password_core 首轮结果
+
+维护者在私有终端执行同一绑定 P2 包，返回闭集回执：binding verified，开发结果 blocked / state_machine_failed；initial_status_offline pass（exit 0），login_logged_in blocked（exit 3 / network）。本地转录和分析见 `build/auth-password-20261030/`，不包含终端账号提示或凭据；这是维护者回传结果，不是 Agent 直接采集的原始 stdout。
+
+product_commands 3 包括 profile show、初始 status 和 login。step_coverage complete 只表示状态机正常返回，不能表示七步通过；password 模式请求/Cookie/页面字段未采集，其零值不是零网络证据。未进入后续 online 检查，未取得 cleanup 所有权，没有注销或结束时 offline 的证据。network 无法区分传输失败、超时或 HTTP 非成功状态，不能认定本次仍为历史 HTTP 500。
+
+下一最小工作是离线收敛产品等价的失败阶段观察契约与接入方式，再决定相应实现和新的私有窗口；不自动重试、不恢复 CTL 主线、不猜测选键。单次授权已消耗，正式 password_core / M3 状态不变。
+
+### 2026-10-30 P3 失败分类开发工具离线交付
+
+维护者已确认 [ADR-0018](../architecture/decisions/ADR-0018-development-auth-failure-observation.md)，完整被动观察方案已实现并完成专项离线验收。独立 observed CLI 复用原 CLI/app/SDK 与私有 prompt，普通产品不启用观察；请求角色、HTTP状态和固定错误类别单独封装，不读取正文/header/query，也不改变选键、请求、TLS或cleanup语义。
+
+最终包位于 `build/dev-runs/windows/20261030T040449Z-27fa0356-auth-dev/ready/`，source `8fb7735263af6130c8106a15c02c15a794e0698d1c9fcbf508cac990fe74706c`，176文件快照，分别绑定普通产品与 observed CLI；新外层 schema 2 / auth-dev-observed 不重解释旧回执。Windows专项测试/vet/自检/绑定、Linux专项普通/race/vet/fuzz及六平台普通产品依赖隔离/构建通过，详见 `build/auth-observed-p3-20261030/REPORT.md`。
+
+本次只是观测工具就绪，不是 P3 认证修复完成。尚无新包真实结果，前次 network 根因未知；正式 password_core、M3 和 Windows 安装/junction 缺口均不提升。下一步仅为另行单次授权的私有开发 password_core，不重复匿名或 CTL，不读取真实配置/凭据或自动重试。
+
+### 2026-10-30 P3 私有观察窗口：CAS POST 500
+
+维护者随后在私有终端确认并执行上述新包，回传 schema 2 闭集结果；source 与普通产品、observed CLI 身份对应已交付包。本地规范化转录、严格解码和文件哈希核验见 `build/auth-observed-live-20261030/`。这是维护者回传证据，不是 Agent 采集的原始 stdout；前段“尚无新包真实结果”保留为交付时状态。
+
+initial_status_offline 通过，login 以 exit 3 / network 停止；新增 SDK 类别为 cas_http_status。login 轨迹是 status 200、两次 discovery 302、三次 cas_get 200、cas_post 500，均 response_received=true、transport=none。加上独立初始 status，共记录 8 次应用 RoundTrip，不能作为操作系统 DNS/TCP 总量。本轮明确失败在 CAS POST 响应，未记录 activation；此前 GET/TLS 路径可用，不再以 CTL 专项作为默认前置。
+
+该轨迹不区分三个 cas_get 的页面/脚本身份，不观察正文、Cookie、选键及表单关系；HTTP 500 尚不能归因为密码、密钥、会话或服务端具体异常。旧内层 result 的请求/Cookie/页面零值仍是 password 模式未采集字段，不覆盖 observations。step_coverage complete 不表示七步通过；未取得后续目标身份 online 或最终 offline 证据，未取得 cleanup 所有权。
+
+下一步收敛到 P1 矩阵中的提交上下文：先离线核对 form/action/service、动态状态与 CAS Jar 连续性、页面/脚本取键和加密输入契约；只对独立复现且有规范依据的缺陷修复。新增真实材料观察或产品语义变化须单独决策，不直接改选第二个键、不重复同包登录。此次授权已消耗；正式 password_core 仍 blocked / live_unverified，M3 仍 in_progress。
+
+### 2026-10-30 P3 提交上下文合成检查
+
+已完成 [提交上下文核对](../research/cas-submit-context-2026-10-30.md)。新增 CAS/SDK 合成测试覆盖 action 形状与重定向后解析、Cookie 轮换/删除/作用域、两轮失败后会话隔离、同轮动态字段、生成 RSA 的实际解密及 UTF-16 长度、提交前拒绝和 500 后不重试。Windows 聚焦普通测试及 Linux 聚焦普通/race/vet 全部通过，报告分别位于 `build/dev-runs/windows/20261030T105227Z-7260082f-focus/`、`build/auth-submit-context-20261030/`。
+
+本轮未复现需要修改产品实现的缺陷，没有改变认证或选键行为，也没有新增真实请求。真实 POST 的表单/会话/键关联仍未知；现有来源分析器不实现 JS 使用关系，不能仅以“两键”解释 500。下一最小方案是 [待确认的匿名上下文观察](../operations/development-validation.md#p3-anonymous-context-proposal)，只分析 SDK 实际消费来源并区分当前 parser 命中与页面目标关系；未确认前不实施。正式状态与安装回归缺口保持。
+
+### 2026-10-30 P3 匿名上下文离线交付
+
+维护者随后确认完整范围，[ADR-0019](../architecture/decisions/ADR-0019-anonymous-submit-context.md) 已 accepted。独立 `auth-context-dev` 复用已有 SDK 匿名路径，只分析实际完整消费的成功响应；输出表单目标关系、来源类别和 parser_match，浏览器使用关系仍 unknown，不改变产品选键或 ADR-0018 的 password 观察范围。
+
+Windows 专项普通/vet、启动器自检与九类包检查，Linux 普通/race/vet/有界 fuzz 均通过；六平台产品依赖隔离和构建通过，不等于原生认证验收。最终包为 `build/dev-runs/windows/20261030T112836Z-6bb2cf77-auth-context/ready/`，source `b0dc49ea88070b8837b561e76ee66648cc81bceeae144c489965d75ec79e17d9`，175 项快照与当前源码/包文件哈希匹配。Agent 使用正式工具审批账户执行本地 `--preflight`，ready、live_attempted=false、应用请求/产品命令均为零；报告见 `build/auth-context-p3-20261030/REPORT.md`。
+
+本次只完成独立工具的离线交付，没有真实来源、真实选键或新的登录结论，也未修复或解释 HTTP 500。原 P2/P3、D 系包和中间开发包保留；没有 Candidate、提交、推送或发布。下一步仅为另行单次授权的匿名上下文窗口，不需要 profile/密码；正式 password_core 仍 blocked / live_unverified，M3 与安装回归缺口保持。
+
+### 2026-10-30 P3 匿名上下文窗口结果
+
+维护者授权并确认现场条件后，Agent 在 BHKDesktop 原生 Windows 运行上述最终包一次，退出码 0，binding verified。`build/auth-context-live-20261030/` 保存 PTY 规范化闭集转录及报告；原包严格解码、四项哈希和 175 项工作区/包内源码快照核验通过。没有保存真实页面、脚本、Cookie、URL、键值或凭据。
+
+SDK 到达 credential_boundary_reached：6 次应用 GET（status 1、discovery 2、CAS 3），本轮 CAS Cookie 接收/回送为 true。表单 selection、lt、execution 均 unique，同源 HTTPS，action 与初始/最终页面完整目标相同，service 相同。仅对本次匿名窗口成立，不回溯证明前次 password POST 的动态上下文正确。
+
+成功响应来源 3 个（页面及两份外部脚本）；分析拆分为 17 个来源单元，不代表 17 次请求。parser_match 映射至第二份已消费外部脚本 S17 的 occurrence 1，但分析为 partial / unsupported_syntax，该匹配的上下文、标识符及赋值分类均 unknown，键未检查，use_relation 仍 unknown。keys/relations 为空不表示零键，也没有建立与历史两个 publicKeyStr 的相等关系；“第二份脚本”不能解释成“第二把键”。
+
+本次缩小了匿名表单目标关系的疑点，未解释 CAS POST 500、未证明实际用键或登录成功。单次授权已消耗；没有 profile/密码读取、POST、activation、logout、额外脚本或自动重试。下一步先离线审阅分析器的不支持语法降级边界并设计合成判别；现有材料不支持猜测真实语法，若扩大语法/输出或实际使用关系观察须先形成集中决策。正式 password_core 仍 blocked / live_unverified，M3 与 Windows 安装回归缺口保持。
+
+### 2026-10-30 P3 语法覆盖边界离线核对
+
+已完成[来源分析器的降级路径核对](../research/cas-submit-context-2026-10-30.md)。新增合成回归证明：词法遇阻后的代码、注释或字符串匹配可以投影为同一 unknown 回执；赋值语法失败与词法失败不同，早先来源的 partial 不会污染后一个外部脚本。当前真实回执不能辨识其具体触发原因，不能推断存在某种真实语法或直接改选键。
+
+Windows 来源分析普通/vet/自检及 Linux 普通/race/vet/有界 fuzz/自检通过，具体回执见研究记录。没有修改产品或观察语义、重新打包或新增真实请求；unknown 符合现行保守契约，尚未发现规范支持的产品修复。后续需集中评估静态语法覆盖范围，避免逐项原因采集与反复校园复测；任何语义/输出扩展或真实窗口均不由本轮自动授权。正式 password_core、M3 与既有缺口不变。
+
+<a id="status-20261030-static"></a>
+
+### 2026-10-30 P3 完整静态语法离线交付
+
+维护者确认后，按 [ADR-0020](../architecture/decisions/ADR-0020-bounded-static-cas-syntax.md) 完成成熟 parser 的固定版本评估、预算派生、独立观察和打包。新 schema 2 的 context 保留旧回执含义，syntax 分别报告词法上下文、直接字面量赋值、本轮相等标签与函数/控制等语法位置；不执行 JS、不改变产品选键，use_relation 始终 unknown。完整范围、验证和限制见[研究记录](../research/cas-submit-context-2026-10-30.md)及[开发契约](../operations/development-validation.md#p3-static-syntax-proposal)。
+
+最终包 `build/dev-runs/windows/20261030T124136Z-538b1b67-auth-static-context/ready/`，source `1c4215a2c3fdd753aa0162072af06b8ffbd4e3b33d5fdb9f9a9acaf4401a7a36`。199 项快照和包哈希一致；Windows 专项普通/vet/自检/原生 Job 与硬终止/九类绑定检查、Linux 普通/race/vet/有界 fuzz，以及六平台三个普通产品构建和诊断依赖隔离通过。Agent 自动完成最终包零网络预检，binding verified / ready，未执行匿名入口；回执见 `build/auth-static-context-p3-20261030/REPORT.md`。
+
+这关闭的是新增静态观察的离线交付工作包，不是 P3 认证修复。没有真实新材料，不能预言此前 S17 必可解析；旧采集守卫、不支持语法和资源边界仍可能停止。正则只识别词法外壳，不承诺完整浏览器语法合法性；源码/许可证与派生哈希可重验，维护该派生补丁仍是后续升级成本。
+
+下一步可另行批准最终新包的一次产品等价匿名窗口，观察同轮 SDK 匹配的静态类别；不是自动重试密码或重新启动 CTL 路线。原真实授权已消耗，本次未新增校园请求、profile/凭据读取或认证成功证据。正式 password_core 仍 blocked / live_unverified，M3 in_progress，既有 Windows 安装/junction 缺口保留；未创建 Candidate、提交或发布。
+
+### 2026-10-30 P3 静态语法单次窗口：产品文本命中注释
+
+维护者新的单次授权和现场条件确认后，Agent 自动执行上述最终包一次，source `1c4215a2c3fdd753aa0162072af06b8ffbd4e3b33d5fdb9f9a9acaf4401a7a36`，binding verified，退出码 0。脱敏回执为 PTY 规范化转录，严格解码、四项包哈希与 199 项快照核验通过，见 `build/auth-static-context-live-20261030/REPORT.md`；不冒称字节精确 stdout，不保存真实页面或密钥。
+
+本轮达到凭据边界：6 次应用 GET（status 1、discovery 2、CAS 3），本轮 Cookie 接收/回送，form/lt/execution 均 unique，HTTPS/初始/最终 action 及 service 关系均 same。三个成功消费来源分解为 17 个分析来源；这些 ID 是本轮局部索引，不是 17 次网络请求，也不能与历史来源做内容级比对。
+
+旧 context 仍为 partial / unsupported_syntax；新 syntax 为 observed，parser_match 指向 S17（第二个已消费外部脚本）的 occurrence 1，**context=comment、assignment_class=none**。这直接支持“产品文本匹配会把脚本注释中的公钥文本作为候选”的具体问题，与现有生成密钥合成回归一致。新报告 keys 为空表示本观察未识别可确认的 RSA 字面量赋值，不表示真实页面不存在键、原匹配值不是 RSA，或后续未消费脚本也无键。
+
+本轮没有密码、RSA 加密或 CAS POST，尚不能把 HTTP 500 唯一归因为该注释，也不能推断浏览器实际用键。下一步应离线形成针对注释/字符串/子串候选的产品取键契约与回归方案，再决定安全选键和脚本继续发现规则；不直接选择第二个键或把诊断 parser 自动接入产品。
+
+本次授权已消耗，未重试、额外抓脚本、读取 profile/凭据、执行 JS、POST、activation 或 logout。正式 password_core、M3 和既有安装缺口保持；没有新增产品修复、Candidate、提交或发布。
+
 ## 当前实现快照
 
 截至 2026-08-28，以下内容已进入重写后的 `codex/v1-freeze` 和已验证的 fresh clone，但“实现存在”不代表对应发布门禁已完成：

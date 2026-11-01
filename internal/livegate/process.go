@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/netip"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,6 +33,15 @@ type ProcessExecutor struct {
 	Stdin         *os.File
 	Stdout        *os.File
 	Stderr        *os.File
+	// Optional development execution context. Zero values preserve the formal
+	// runner's existing command line and inherited environment.
+	BindIP        netip.Addr
+	Environment   []string
+	RequireRefuse bool
+	// ProcessAdapter is only set by the independent development launcher. It
+	// returns the original CLI JSON through stdout after validating its private
+	// child protocol. The formal default execution path is unchanged.
+	ProcessAdapter func(context.Context, string, []string, io.Reader, io.Writer, io.Writer) (int, error)
 
 	expectedUsername string
 	run              processRunFunc
@@ -46,6 +56,7 @@ func (executor *ProcessExecutor) PrepareProfile(ctx context.Context, suite Suite
 	if executor == nil ||
 		ctx == nil ||
 		!validProcessConfiguration(executor.CandidatePath, executor.Profile) ||
+		(executor.BindIP.IsValid() && (!executor.BindIP.Is4() || executor.BindIP.IsUnspecified())) ||
 		executor.Stderr == nil ||
 		(suite != SuitePasswordCore && suite != SuiteTerminalQR) {
 		return ErrProcessProfile
@@ -53,7 +64,7 @@ func (executor *ProcessExecutor) PrepareProfile(ctx context.Context, suite Suite
 
 	projection, exit, runErr, parseErr := executor.runJSON(
 		ctx,
-		[]string{"--json", "--profile", executor.Profile, "profile", "show"},
+		append(executor.jsonPrefix(), "profile", "show"),
 	)
 	if ctx.Err() != nil {
 		return ErrProcessRunnerFault
@@ -89,6 +100,9 @@ func (executor *ProcessExecutor) PrepareProfile(ctx context.Context, suite Suite
 			(projection.referenceSeen && projection.reference != "")) {
 		return ErrProcessProfile
 	}
+	if executor.RequireRefuse && (projection.switchInvalid || projection.switchPolicy != "" && projection.switchPolicy != "refuse") {
+		return ErrProcessProfile
+	}
 	executor.expectedUsername = projection.profileUsername
 	return nil
 }
@@ -101,6 +115,7 @@ func (executor *ProcessExecutor) Execute(ctx context.Context, action CommandActi
 		ctx == nil ||
 		executor.expectedUsername == "" ||
 		!validProcessConfiguration(executor.CandidatePath, executor.Profile) ||
+		(executor.BindIP.IsValid() && (!executor.BindIP.Is4() || executor.BindIP.IsUnspecified())) ||
 		executor.Stderr == nil {
 		return runnerFaultObservation()
 	}
@@ -144,7 +159,7 @@ func (executor *ProcessExecutor) Execute(ctx context.Context, action CommandActi
 }
 
 func (executor *ProcessExecutor) jsonAction(action CommandAction) ([]string, string, io.Reader, bool) {
-	prefix := []string{"--json", "--profile", executor.Profile}
+	prefix := executor.jsonPrefix()
 	switch action {
 	case ActionInitialStatus, ActionStatusOnline, ActionFinalStatus, ActionCleanupStatus:
 		return append(prefix, "status"), "status", nil, true
@@ -159,18 +174,44 @@ func (executor *ProcessExecutor) jsonAction(action CommandAction) ([]string, str
 	}
 }
 
+func (executor *ProcessExecutor) jsonPrefix() []string {
+	args := []string{"--json", "--profile", executor.Profile}
+	if executor.BindIP.IsValid() {
+		args = append(args, "--bind-ip", executor.BindIP.String())
+	}
+	return args
+}
+
+func (executor *ProcessExecutor) processRunner() processRunFunc {
+	if executor.run != nil {
+		return executor.run
+	}
+	if executor.ProcessAdapter != nil {
+		return executor.ProcessAdapter
+	}
+	if executor.Environment == nil {
+		return runCandidateProcess
+	}
+	environment := append([]string{}, executor.Environment...)
+	return func(ctx context.Context, path string, args []string, stdin io.Reader, stdout, stderr io.Writer) (int, error) {
+		return runCandidateProcessEnvironment(ctx, path, args, stdin, stdout, stderr, environment)
+	}
+}
+
 func (executor *ProcessExecutor) executeQR(ctx context.Context) Observation {
 	if executor.Stdin == nil || executor.Stdout == nil || executor.Stderr == nil {
 		return runnerFaultObservation()
 	}
-	runner := executor.run
-	if runner == nil {
-		runner = runCandidateProcess
+	runner := executor.processRunner()
+	args := []string{"--profile", executor.Profile}
+	if executor.BindIP.IsValid() {
+		args = append(args, "--bind-ip", executor.BindIP.String())
 	}
+	args = append(args, "login", "--method", "qr")
 	exit, runErr := runner(
 		ctx,
 		executor.CandidatePath,
-		[]string{"--profile", executor.Profile, "login", "--method", "qr"},
+		args,
 		executor.Stdin,
 		executor.Stdout,
 		executor.Stderr,
@@ -213,10 +254,7 @@ func (executor *ProcessExecutor) runJSONWithInput(
 	stdin io.Reader,
 ) (candidateProjection, int, error, error) {
 	var projection candidateProjection
-	runner := executor.run
-	if runner == nil {
-		runner = runCandidateProcess
-	}
+	runner := executor.processRunner()
 	reader, writer := io.Pipe()
 	done := make(chan processRunResult, 1)
 	go func() {
@@ -242,7 +280,12 @@ func runCandidateProcess(
 	stdout io.Writer,
 	stderr io.Writer,
 ) (int, error) {
+	return runCandidateProcessEnvironment(ctx, candidatePath, args, stdin, stdout, stderr, nil)
+}
+
+func runCandidateProcessEnvironment(ctx context.Context, candidatePath string, args []string, stdin io.Reader, stdout, stderr io.Writer, environment []string) (int, error) {
 	command := exec.CommandContext(ctx, candidatePath, args...)
+	command.Env = environment
 	command.Stdin = stdin
 	command.Stdout = stdout
 	command.Stderr = stderr
@@ -261,8 +304,10 @@ func runCandidateProcess(
 }
 
 type candidateProjection struct {
-	rootObject bool
-	invalid    bool
+	switchPolicy  string
+	switchInvalid bool
+	rootObject    bool
+	invalid       bool
 
 	schemaSeen bool
 	schema     string
@@ -322,6 +367,14 @@ func (projection *candidateProjection) project(path []string, node candidateJSON
 	}
 
 	switch {
+	case candidatePathEquals(path, "data", "profile", "switch"):
+		if node.kind != candidateJSONScalar {
+			projection.switchInvalid = true
+			return nil
+		}
+		value, invalid := candidateStringValue(node.scalar)
+		projection.switchPolicy = value
+		projection.switchInvalid = projection.switchInvalid || invalid
 	case candidatePathEquals(path, "schema_version"):
 		projection.schemaSeen = true
 		if node.kind != candidateJSONScalar {

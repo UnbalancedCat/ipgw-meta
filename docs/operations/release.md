@@ -5,12 +5,14 @@ revision: 2026-08-28-r2
 
 # 发布操作手册
 
+2026-10-31 P4：当前 evidence/promotion v2、三组 BHK 必需认证及辅助门禁见 [BHK 正式验收 v2](bhk-acceptance.md)。当前生成与晋升使用 v2；旧四组和旧格式仅在显式历史审计中生效，历史回执不重写。Candidate/release manifest 仍为 v1；格式迁移不提升真实认证能力。
+
 v1 按门禁而不是日期发布。M0 残余历史治理继续跟踪但不参与 Candidate、Promotion 或 release 的状态判定；风险接受与仍保留的独立 hard gate 见 [`ADR-0011`](../architecture/decisions/ADR-0011-nonblocking-m0-governance.md)。
 
-## REL-WINDOW-001：短执行窗口
+## REL-WINDOW-001：执行范围与检查点
 
-- 每个执行窗口只处理一个工作包，最多 30–45 分钟；开始时声明修改范围与停止条件，最后约 10 分钟用于验证和交接。
-- 不在窗口末启动新的高风险动作。超时测试停止或转为外部 CI，只记录 workflow/run ID，下一窗口再读取结果。
+- 开始时声明工作包、修改范围与停止条件，并持续验证和记录检查点。2026-10-28 维护者明确：本机离线开发不因达到 30–45 分钟而强制停止；可在已授权范围内持续完成依赖工作，避免无意义地等待下一轮确认。
+- 测试仍使用具体的资源/超时上限；失败必须区分环境与实现原因。真实网络、发布及其他高风险操作单独审批，不因离线工作持续进行而自动取得授权。完成范围或出现无法自主解除的阻塞时交接。
 - 结束时不得存在后台登录/QR 轮询、未知活动校园网会话、半完成 ref 更新、未处理安装事务或未说明的敏感临时文件。
 - 窗口结束只更新正式里程碑状态和最小 Agent handoff；不得把未完成工作写成 complete。
 
@@ -70,9 +72,10 @@ doccheck --check
 
 自动化通过后，由维护者在候选二进制上执行：
 
-- NAS Ubuntu campus wired：password-core、same-account、幂等 logout 和 Terminal QR；
-- BHK Windows campus wired：password-core 和 Windows 原生离线安装；
-- BHK Windows campus Wi-Fi：password-core、bind IP、network list/scan；
+- BHK Windows campus wired：password-core 和 Terminal QR；
+- BHK Windows campus Wi-Fi：password-core；
+- 同一 Candidate 的 Windows 原生安装及 Wi-Fi bind IP、network list/scan 两项独立辅助验收；
+- NAS Ubuntu campus wired password/QR 与 BHK Wi-Fi QR 仅为可选采集，不能替代三组 BHK 必需认证；
 - macOS 只要求原生安装和 CLI smoke，release notes 必须明确没有校园网认证证据。
 
 完整状态机、候选传输和矩阵由 [`REL-LIVEGATE-001`](live-validation.md#rel-livegate-001runner-接口与信任边界) 与 [`REL-LIVE-MATRIX-001`](live-validation.md#rel-live-matrix-001v1-真实网络矩阵) 定义。只有一个授权账号，异账号 conflict/switch 只保留合成覆盖且不阻塞 v1。结果只按 [`EVID-BUNDLE-001`](../evidence/README.md#evid-bundle-001私有证据-bundle) 落盘；手机验证码保持 `observed_anonymous + detected_only`，不得写入“支持”列表。
@@ -130,13 +133,15 @@ provenance 精确覆盖十一个 subject：candidate-set subject 使用 artifact
 
 promotion lock 位于 `docs/evidence/releases/v1.0.0/promotion-lock.json`。它只绑定已经通过真实矩阵和人工复核的 Candidate；不得把 PR/native 临时 artifact、重新构建输出或本地副本写入 lock。
 
-### Promotion lock v1
+### Promotion lock v2
 
-`promotion-lock.json` 是 closed-world canonical JSON：有效 UTF-8、大小不超过 64 KiB，拒绝任意层 duplicate key、未知/缺失字段、第二个 JSON value 与非空白尾随字节；编码按下述字段顺序使用紧凑 JSON，末尾恰好一个 LF，validator 必须拒绝不等于 canonical 编码的原始字节。顶层精确包含 15 个字段：`schema_version`、`plan_id`、`revision`、`version`、`candidate_id`、`source_commit`、`source_tree`、`workflow`、`artifact`、`candidate_set_sha256`、`release_manifest_sha256`、`build_input_sha256`、`attestation_subjects`、`evidence_ids`、`release_notes_sha256`。
+`promotion-lock.json` 是 closed-world canonical JSON：有效 UTF-8、大小不超过 64 KiB，拒绝任意层 duplicate key、未知/缺失字段、第二个 JSON value 与非空白尾随字节；编码按下述字段顺序使用紧凑 JSON，末尾恰好一个 LF，validator 必须拒绝不等于 canonical 编码的原始字节。顶层精确包含 17 个字段：`schema_version`、`plan_id`、`revision`、`version`、`candidate_id`、`source_commit`、`source_tree`、`workflow`、`artifact`、`candidate_set_sha256`、`release_manifest_sha256`、`build_input_sha256`、`attestation_subjects`、`evidence_ids`、`release_notes_sha256`、`installation_summary`、`wifi_summary`。
 
-`schema_version`、plan/revision/version 固定为 `1`、`IPGW-META-V1`、`2026-08-28-r2`、`v1.0.0`。candidate/source/tree 与 [`REL-ATTEST-001`](#rel-attest-001candidate-manifest-与-provenance) 使用相同格式和交叉约束。`workflow` 精确包含 `repository_id`、`path`、`run_id`、`run_attempt`，依次固定为当前 GitHub repository ID `1186323753`、`.github/workflows/candidate.yml` 和 Candidate 的正整数 run ID/attempt。`artifact` 精确包含正整数 `id`、固定 `name` 与 `digest`；name 必须为 `candidate-set-<candidate_id>`，digest 必须为 `sha256:<64-lowerhex>`。
+`schema_version`、plan/revision/version 固定为 `2`、`IPGW-META-V1`、`2026-08-28-r2`、`v1.0.0`。candidate/source/tree 与 [`REL-ATTEST-001`](#rel-attest-001candidate-manifest-与-provenance) 使用相同格式和交叉约束。`workflow` 精确包含 `repository_id`、`path`、`run_id`、`run_attempt`，依次固定为当前 GitHub repository ID `1186323753`、`.github/workflows/candidate.yml` 和 Candidate 的正整数 run ID/attempt。`artifact` 精确包含正整数 `id`、固定 `name` 与 `digest`；name 必须为 `candidate-set-<candidate_id>`，digest 必须为 `sha256:<64-lowerhex>`。
 
-三个独立 SHA-256 必须分别等于 candidate manifest 原始字节、`release/release-manifest.json` 原始字节及 Candidate manifest 的 build-input 值。`attestation_subjects` 精确包含 11 个对象，每个对象按 `name`、`sha256` 顺序编码并按 name 原始 ASCII 字节升序：第一类是 artifact name 与 artifact digest，另外十项是 Candidate manifest 中全部公开资产的最终 basename 与文件 digest；禁止私有 helper、根 checksum、重复或大小写折叠冲突。`evidence_ids` 精确包含四个互异 `EVID-YYYYMMDD-NNN`，按 ASCII 升序，并各自绑定同目录 `<evidence-id>.json` 的 canonical public summary；四份 summary 必须恰好覆盖 [`REL-LIVE-MATRIX-001`](live-validation.md#rel-live-matrix-001v1-真实网络矩阵) 的四个环境 tuple 且均为 `pass`。`release_notes_sha256` 绑定同目录 `release-notes.md` 的精确字节。
+三个独立 SHA-256 必须分别等于 candidate manifest 原始字节、`release/release-manifest.json` 原始字节及 Candidate manifest 的 build-input 值。`attestation_subjects` 精确包含 11 个对象，每个对象按 `name`、`sha256` 顺序编码并按 name 原始 ASCII 字节升序：第一类是 artifact name 与 artifact digest，另外十项是 Candidate manifest 中全部公开资产的最终 basename 与文件 digest；禁止私有 helper、根 checksum、重复或大小写折叠冲突。`evidence_ids` 精确包含三个互异 `EVID-YYYYMMDD-NNN`，按 ASCII 升序，并各自绑定同目录 `<evidence-id>.json` 的 canonical public summary；三份 summary 必须恰好覆盖 [`REL-LIVE-MATRIX-001`](live-validation.md#rel-live-matrix-001v1-真实网络矩阵) 的三个必需 BHK 环境 tuple 且均为 `pass`。`release_notes_sha256` 绑定同目录 `release-notes.md` 的精确字节。
+
+installation_summary 与 wifi_summary 各仅含 summary_id、sha256，按 [REL-BHK-PROMOTION-002](bhk-acceptance.md#rel-bhk-promotion-002晋升) 核验闭集 ID、canonical 文件哈希、kind、pass、同一 Candidate/build-input 和 runner 绑定。任一缺失、失配或失败阻止晋升；不能当作认证证据。
 
 `release-notes.md` 必须是以下 canonical UTF-8/LF 内容，不得增加自由文本、HTML、链接查询参数或未由 lock/evidence 支持的能力声明：
 
@@ -146,13 +151,16 @@ promotion lock 位于 `docs/evidence/releases/v1.0.0/promotion-lock.json`。它�
 - 新安装默认模式：`meta`。
 - 既有安装默认模式：保持 `legacy`；迁移必须由维护者显式执行。
 - 配置迁移：使用 v1 事务化 preview/apply 流程；失败保持旧配置并保留可恢复状态。
-- Password 真实证据：promotion lock 绑定 NAS campus wired、BHK campus wired 与 BHK campus Wi-Fi 三项通过记录。
-- Terminal QR 真实证据：promotion lock 绑定 NAS campus wired 一项真实闭环通过记录。
+- Password 真实证据：promotion lock 绑定 Windows/BHK campus wired 与 campus Wi-Fi 两项通过记录。
+- Terminal QR 真实证据：promotion lock 绑定 Windows/BHK campus wired 一项真实闭环通过记录。
 - 异账号 conflict/switch：仅有合成覆盖，不声明真实双账号验收。
 - OTP：仅 `observed_anonymous + detected_only`，不声明登录支持。
 - 自更新：禁用；请从官方 GitHub Release 获取并验证资产。
+- Linux：保留合成、race 与原生安装门禁；没有本 Candidate 校园认证证据，保持 live_unverified。
 - macOS：仅完成原生安装和 CLI smoke，没有校园网认证证据。
 ```
+
+历史 v1 lock 只经 `promotion.py history` 只读核验：旧 15 字段、四项认证、无辅助引用，旧 notes 的 password 覆盖 NAS wired/BHK wired/BHK Wi-Fi、QR 覆盖 NAS wired，且无新增 Linux 行。旧 notes 精确字节保留于历史校验常量；当前 lock/api/artifact/candidate/attestations/release 路径均拒绝 v1，不把本地历史结构核验称为线上 provenance 复验。
 
 ### Source、tag 与远端身份
 

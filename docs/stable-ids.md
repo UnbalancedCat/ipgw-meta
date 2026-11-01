@@ -25,6 +25,16 @@ generated: true
 | `ADR-0013` | CAS HTML 优先于 JSONP challenge 分类 | [docs/architecture/decisions/ADR-0013-cas-html-before-jsonp.md](architecture/decisions/ADR-0013-cas-html-before-jsonp.md#adr-0013cas-html-优先于-jsonp-challenge-分类) |
 | `ADR-0014` | CAS RSA-512 仅作为 HTTPS 内兼容封装 | [docs/architecture/decisions/ADR-0014-cas-rsa-compatibility-envelope.md](architecture/decisions/ADR-0014-cas-rsa-compatibility-envelope.md#adr-0014cas-rsa-512-仅作为-https-内兼容封装) |
 | `ADR-0015` | CAS 密码提交采用六字段闭包 | [docs/architecture/decisions/ADR-0015-cas-submit-closed-fields.md](architecture/decisions/ADR-0015-cas-submit-closed-fields.md#adr-0015cas-密码提交采用六字段闭包) |
+| `ADR-0016` | CAS 来源诊断先于选键语义变更 | [docs/architecture/decisions/ADR-0016-cas-provenance-before-key-selection.md](architecture/decisions/ADR-0016-cas-provenance-before-key-selection.md#adr-0016cas-来源诊断先于选键语义变更) |
+| `ADR-0017` | 产品等价开发验证与正式 Candidate 证据分离 | [docs/architecture/decisions/ADR-0017-development-auth-validation.md](architecture/decisions/ADR-0017-development-auth-validation.md#adr-0017产品等价开发验证与正式-candidate-证据分离) |
+| `ADR-0018` | 独立开发入口的认证失败分类 | [docs/architecture/decisions/ADR-0018-development-auth-failure-observation.md](architecture/decisions/ADR-0018-development-auth-failure-observation.md#adr-0018独立开发入口的认证失败分类) |
+| `ADR-0019` | 产品等价匿名提交上下文 | [docs/architecture/decisions/ADR-0019-anonymous-submit-context.md](architecture/decisions/ADR-0019-anonymous-submit-context.md#adr-0019产品等价匿名提交上下文) |
+| `ADR-0020` | 有界静态 CAS 语法观察 | [docs/architecture/decisions/ADR-0020-bounded-static-cas-syntax.md](architecture/decisions/ADR-0020-bounded-static-cas-syntax.md#adr-0020有界静态-cas-语法观察) |
+| `ADR-0021` | 按有限登录使用关系动态取键 | [docs/architecture/decisions/ADR-0021-cas-key-use-relation.md](architecture/decisions/ADR-0021-cas-key-use-relation.md#adr-0021按有限登录使用关系动态取键) |
+| `ADR-0022` | 独立开发入口的有界注销响应结构观察 | [docs/architecture/decisions/ADR-0022-development-logout-structure.md](architecture/decisions/ADR-0022-development-logout-structure.md#adr-0022独立开发入口的有界注销响应结构观察) |
+| `ADR-0023` | Chrome 注销响应与旧版行为对照 | [docs/architecture/decisions/ADR-0023-browser-logout-comparison.md](architecture/decisions/ADR-0023-browser-logout-comparison.md#adr-0023chrome-注销响应与旧版行为对照) |
+| `ADR-0024` | 注销请求显式指定 JSONP callback | [docs/architecture/decisions/ADR-0024-logout-explicit-callback.md](architecture/decisions/ADR-0024-logout-explicit-callback.md#adr-0024注销请求显式指定-jsonp-callback) |
+| `ADR-0025` | BHK 正式验收 v2 与辅助门禁 | [docs/architecture/decisions/ADR-0025-bhk-formal-acceptance.md](architecture/decisions/ADR-0025-bhk-formal-acceptance.md#adr-0025bhk-正式验收-v2-与辅助门禁) |
 | `ARCH-BOUNDARY-001` | 产品边界 | [docs/architecture/overview.md](architecture/overview.md#arch-boundary-001产品边界) |
 | `ARCH-CONCURRENCY-001` | 生命周期 | [docs/architecture/overview.md](architecture/overview.md#arch-concurrency-001生命周期) |
 | `ARCH-MODE-001` | 模式选择 | [docs/architecture/overview.md](architecture/overview.md#arch-mode-001模式选择) |
@@ -46,6 +56,8 @@ generated: true
 | `CLI-STREAM-001` | 输出通道 | [docs/reference/cli.md](reference/cli.md#cli-stream-001输出通道) |
 | `CLI-TREE-001` | 现代命令树 | [docs/reference/cli.md](reference/cli.md#cli-tree-001现代命令树) |
 | `EVID-AUTH-001` | 认证证据字段 | [docs/evidence/README.md](evidence/README.md#evid-auth-001认证证据字段) |
+| `EVID-BHK-002` | 版本与绑定 | [docs/operations/bhk-acceptance.md](operations/bhk-acceptance.md#evid-bhk-002版本与绑定) |
+| `EVID-BHK-AUX-001` | 辅助验收 | [docs/operations/bhk-acceptance.md](operations/bhk-acceptance.md#evid-bhk-aux-001辅助验收) |
 | `EVID-BUNDLE-001` | 私有证据 bundle | [docs/evidence/README.md](evidence/README.md#evid-bundle-001私有证据-bundle) |
 | `EVID-CAPTURE-001` | 源端捕获与持久性 | [docs/evidence/README.md](evidence/README.md#evid-capture-001源端捕获与持久性) |
 | `EVID-GATE-001` | 证据门禁 | [docs/evidence/README.md](evidence/README.md#evid-gate-001证据门禁) |
@@ -85,9 +97,17 @@ generated: true
 | `PROTO-TRANSPORT-001` | HTTPS-only | [docs/architecture/protocol-correctness.md](architecture/protocol-correctness.md#proto-transport-001https-only) |
 | `REL-APPROVAL-001` | 高风险动作逐项批准 | [docs/operations/release.md](operations/release.md#rel-approval-001高风险动作逐项批准) |
 | `REL-ATTEST-001` | Candidate manifest 与 provenance | [docs/operations/release.md](operations/release.md#rel-attest-001candidate-manifest-与-provenance) |
+| `REL-BHK-GATES-001` | 政策与切换 | [docs/operations/bhk-acceptance.md](operations/bhk-acceptance.md#rel-bhk-gates-001政策与切换) |
+| `REL-BHK-PATH-001` | 原生测试路径 | [docs/operations/bhk-acceptance.md](operations/bhk-acceptance.md#rel-bhk-path-001原生测试路径) |
+| `REL-BHK-PROMOTION-002` | 晋升 | [docs/operations/bhk-acceptance.md](operations/bhk-acceptance.md#rel-bhk-promotion-002晋升) |
 | `REL-BUNDLE-001` | 原子发布包 | [docs/operations/release.md](operations/release.md#rel-bundle-001原子发布包) |
 | `REL-CANDIDATE-001` | 候选与发布顺序 | [docs/operations/release.md](operations/release.md#rel-candidate-001候选与发布顺序) |
+| `REL-CAS-DIAG-001` | 独立身份与执行边界 | [docs/operations/cas-provenance-diagnostic.md](operations/cas-provenance-diagnostic.md#rel-cas-diag-001独立身份与执行边界) |
 | `REL-CI-001` | 自动化门禁 | [docs/operations/release.md](operations/release.md#rel-ci-001自动化门禁) |
+| `REL-DEV-ANON-001` | 复用 SDK 的凭据前观察 | [docs/operations/development-validation.md](operations/development-validation.md#rel-dev-anon-001复用-sdk-的凭据前观察) |
+| `REL-DEV-AUTH-001` | 身份、授权与输出 | [docs/operations/development-validation.md](operations/development-validation.md#rel-dev-auth-001身份授权与输出) |
+| `REL-DEV-PASSWORD-001` | 复用产品与闭环状态机 | [docs/operations/development-validation.md](operations/development-validation.md#rel-dev-password-001复用产品与闭环状态机) |
+| `REL-DEV-TEST-001` | 离线验收与切换条件 | [docs/operations/development-validation.md](operations/development-validation.md#rel-dev-test-001离线验收与切换条件) |
 | `REL-INSTALL-001` | 离线 acquisition | [docs/operations/offline-install.md](operations/offline-install.md#rel-install-001离线-acquisition) |
 | `REL-INSTALL-002` | 归档、路径与权限 | [docs/operations/offline-install.md](operations/offline-install.md#rel-install-002归档路径与权限) |
 | `REL-INSTALL-003` | 事务、回滚与失败注入 | [docs/operations/offline-install.md](operations/offline-install.md#rel-install-003事务回滚与失败注入) |
@@ -103,7 +123,7 @@ generated: true
 | `REL-PROMOTION-001` | Promotion lock 与原样发布 | [docs/operations/release.md](operations/release.md#rel-promotion-001promotion-lock-与原样发布) |
 | `REL-TRANSFER-001` | 候选下载与远端传输 | [docs/operations/live-validation.md](operations/live-validation.md#rel-transfer-001候选下载与远端传输) |
 | `REL-UPDATE-001` | 未来恢复自更新的前置条件 | [docs/operations/release.md](operations/release.md#rel-update-001未来恢复自更新的前置条件) |
-| `REL-WINDOW-001` | 短执行窗口 | [docs/operations/release.md](operations/release.md#rel-window-001短执行窗口) |
+| `REL-WINDOW-001` | 执行范围与检查点 | [docs/operations/release.md](operations/release.md#rel-window-001执行范围与检查点) |
 | `SDK-API-001` | 公开 façade | [docs/reference/go-sdk.md](reference/go-sdk.md#sdk-api-001公开-façade) |
 | `SDK-CACHE-001` | 协议状态存储 | [docs/reference/go-sdk.md](reference/go-sdk.md#sdk-cache-001协议状态存储) |
 | `SDK-CONCURRENCY-001` | 并发与边界 | [docs/reference/go-sdk.md](reference/go-sdk.md#sdk-concurrency-001并发与边界) |
@@ -112,6 +132,7 @@ generated: true
 | `SDK-LOGIN-001` | 认证输入 | [docs/reference/go-sdk.md](reference/go-sdk.md#sdk-login-001认证输入) |
 | `SDK-OBSERVE-001` | 可观测性 | [docs/reference/go-sdk.md](reference/go-sdk.md#sdk-observe-001可观测性) |
 | `SDK-STATUS-001` | 状态模型 | [docs/reference/go-sdk.md](reference/go-sdk.md#sdk-status-001状态模型) |
+| `SEC-DEV-TRANSPORT-001` | 产品传输与本地测试路径 | [docs/operations/development-validation.md](operations/development-validation.md#sec-dev-transport-001产品传输与本地测试路径) |
 | `SEC-HISTORY-001` | 历史泄露响应 | [docs/architecture/security.md](architecture/security.md#sec-history-001历史泄露响应) |
 | `SEC-LOG-001` | 最小可观测性 | [docs/architecture/security.md](architecture/security.md#sec-log-001最小可观测性) |
 | `SEC-REPORT-001` | 安全失败语义 | [docs/architecture/security.md](architecture/security.md#sec-report-001安全失败语义) |

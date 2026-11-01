@@ -44,6 +44,11 @@ func TestSetBundleCurrentUserOnlyACLAssignsCurrentOwner(t *testing.T) {
 
 func TestEnsureBundlePrivateDirectoryConcurrentExistingPreservesACL(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "shared-private")
+	t.Cleanup(func() {
+		if err := setBundleCurrentUserOnlyACL(path, windows.SUB_CONTAINERS_AND_OBJECTS_INHERIT); err != nil {
+			t.Errorf("restore test-only deletion access: %v", err)
+		}
+	})
 	if err := os.Mkdir(path, 0o700); err != nil {
 		t.Fatalf("create shared directory: %v", err)
 	}
@@ -96,6 +101,11 @@ func TestEnsureBundlePrivateDirectoryConcurrentCreateIsAtomicAndPreservesOuterAC
 
 func TestCreateBundleStagingDirectoryConcurrentAtomicAndPreservesParentACL(t *testing.T) {
 	parent := filepath.Join(t.TempDir(), "build", "live-evidence")
+	t.Cleanup(func() {
+		if err := setBundleCurrentUserOnlyACL(parent, windows.SUB_CONTAINERS_AND_OBJECTS_INHERIT); err != nil {
+			t.Errorf("restore test-only deletion access: %v", err)
+		}
+	})
 	if err := ensureBundlePrivateDirectory(parent); err != nil {
 		t.Fatalf("ensure parent: %v", err)
 	}

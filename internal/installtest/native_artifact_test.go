@@ -96,6 +96,9 @@ func prepareNativeInstallAsset(t *testing.T, privateRoot string) nativeInstallAs
 	candidateManifestPath := filepath.Join(artifactRoot, "candidate-manifest.json")
 	_, candidateManifestErr := os.Lstat(candidateManifestPath)
 	candidateMode := candidateManifestErr == nil
+	if os.Getenv("IPGW_NATIVE_INSTALL_CANDIDATE_ONLY") == "1" && !candidateMode {
+		t.Fatal("formal auxiliary check requires Candidate mode")
+	}
 	if candidateManifestErr != nil && !os.IsNotExist(candidateManifestErr) {
 		t.Fatalf("inspect candidate manifest: %v", candidateManifestErr)
 	}

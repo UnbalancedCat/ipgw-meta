@@ -146,6 +146,9 @@ func (p BundlePublisher) Publish(input Evidence) (PublishedBundle, error) {
 // begins. A successful publishDirectory call is the commit point; cancellation
 // after that point is ignored and callers must not discard the committed bundle.
 func (p BundlePublisher) PublishContext(ctx context.Context, input Evidence) (PublishedBundle, error) {
+	if input.SchemaVersion != SchemaVersion {
+		return PublishedBundle{}, ErrEvidenceDurability
+	}
 	published, err := p.publish(ctx, input)
 	if err != nil {
 		if errors.Is(err, ErrEvidencePublishCanceled) {
@@ -431,6 +434,9 @@ func buildBundleSummary(evidence Evidence) []byte {
 	_, _ = fmt.Fprintf(&summary, "- candidate_id: %s\n", evidence.CandidateID)
 	_, _ = fmt.Fprintf(&summary, "- candidate_set_sha256: %s\n", evidence.CandidateSetSHA256)
 	_, _ = fmt.Fprintf(&summary, "- source_commit: %s\n", evidence.SourceCommit)
+	if evidence.SchemaVersion == SchemaVersion {
+		_, _ = fmt.Fprintf(&summary, "- runner_sha256: %s\n", evidence.RunnerSHA256)
+	}
 	_, _ = fmt.Fprintf(&summary, "- platform: %s\n", evidence.Platform)
 	_, _ = fmt.Fprintf(&summary, "- testbed: %s\n", evidence.Testbed)
 	_, _ = fmt.Fprintf(&summary, "- network_type: %s\n", evidence.NetworkType)

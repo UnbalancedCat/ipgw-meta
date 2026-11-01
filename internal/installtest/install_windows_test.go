@@ -770,6 +770,24 @@ func assertWindowsActiveVersion(t *testing.T, f *windowsFixture, version string)
 	cmd.Env = f.environment(nil)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		active := filepath.Join(f.install, "active")
+		target, linkErr := os.Readlink(active)
+		t.Logf("active junction target=%q readlink_error=%v", target, linkErr)
+		for _, candidate := range []string{path, filepath.Join(target, "ipgw.exe")} {
+			info, statErr := os.Stat(candidate)
+			if statErr != nil {
+				t.Logf("active diagnostic path=%q stat_error=%v", candidate, statErr)
+			} else {
+				t.Logf("active diagnostic path=%q size=%d mode=%v", candidate, info.Size(), info.Mode())
+			}
+		}
+		if linkErr == nil {
+			direct := exec.Command(filepath.Join(target, "ipgw.exe"), "--version")
+			direct.Dir = f.root
+			direct.Env = f.environment(nil)
+			directOutput, directErr := direct.CombinedOutput()
+			t.Logf("direct target execution error=%v output=%q", directErr, directOutput)
+		}
 		t.Fatalf("run active ipgw --version: %v\n%s", err, output)
 	}
 	expected := "IPGW-Meta " + version
@@ -880,16 +898,21 @@ func setPrivateDirectoryACL(t *testing.T, path string) {
 $u=[Security.Principal.WindowsIdentity]::GetCurrent().User
 $s=New-Object Security.Principal.SecurityIdentifier('S-1-5-18')
 $a=New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')
-$acl=New-Object Security.AccessControl.DirectorySecurity
-$acl.SetOwner($u)
+$owner=[IO.Directory]::GetAccessControl($p,[Security.AccessControl.AccessControlSections]::Owner).GetOwner([Security.Principal.SecurityIdentifier])
+if($owner.Value -cne $u.Value){throw 'new fixture owner is not current user'}
+$acl=[IO.Directory]::GetAccessControl($p,[Security.AccessControl.AccessControlSections]::Access)
 $acl.SetAccessRuleProtection($true,$false)
+foreach($existing in @($acl.GetAccessRules($true,$false,[Security.Principal.SecurityIdentifier]))){[void]$acl.RemoveAccessRuleSpecific($existing)}
 $inherit=[Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [Security.AccessControl.InheritanceFlags]::ObjectInherit
 foreach($sid in @($u,$s,$a)){
   $rule=New-Object Security.AccessControl.FileSystemAccessRule($sid,[Security.AccessControl.FileSystemRights]::FullControl,$inherit,[Security.AccessControl.PropagationFlags]::None,[Security.AccessControl.AccessControlType]::Allow)
   [void]$acl.AddAccessRule($rule)
 }
-[IO.Directory]::SetAccessControl($p,$acl)`
+[IO.Directory]::SetAccessControl($p,$acl)
+$after=[IO.Directory]::GetAccessControl($p)
+if($after.GetOwner([Security.Principal.SecurityIdentifier]).Value -cne $u.Value -or !$after.AreAccessRulesProtected){throw 'private fixture verification failed'}`
 	runPowerShellHelper(t, script, path)
+	assertPrivateWindowsACL(t, path, true)
 }
 
 func assertPrivateWindowsACL(t *testing.T, path string, requireProtected bool) {
@@ -938,7 +961,7 @@ func runPowerShellHelper(t *testing.T, script string, args ...string) {
 		t.Fatalf("locate Windows PowerShell helper: %v", err)
 	}
 	var command strings.Builder
-	command.WriteString("& { ")
+	command.WriteString("& { $ErrorActionPreference='Stop'; ")
 	command.WriteString(script)
 	command.WriteString(" }")
 	for _, arg := range args {

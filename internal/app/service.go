@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 
 	ipgw "github.com/UnbalancedCat/ipgw-meta"
 	"github.com/UnbalancedCat/ipgw-meta/internal/config"
+	"github.com/UnbalancedCat/ipgw-meta/internal/transport"
 )
 
 type RequestOptions struct {
@@ -30,10 +32,11 @@ type LoginOptions struct {
 }
 
 type Service struct {
-	Paths  config.Paths
-	Store  *config.Store
-	Input  *os.File
-	Output io.Writer
+	Paths    config.Paths
+	Store    *config.Store
+	Input    *os.File
+	Output   io.Writer
+	decorate func(http.RoundTripper) http.RoundTripper
 }
 
 type resolvedLoginTarget struct {
@@ -48,6 +51,15 @@ func New(paths config.Paths, input *os.File, output io.Writer) *Service {
 		Store: &config.Store{Path: paths.ConfigFile, MigrationJournal: paths.MigrationJournal},
 		Input: input, Output: output,
 	}
+}
+
+// NewObserved is an internal development seam. The ordinary product continues
+// to use New. The decorator receives the default, source-bound transport; it
+// must preserve requests, responses, errors and credential handling.
+func NewObserved(paths config.Paths, input *os.File, output io.Writer, decorate func(http.RoundTripper) http.RoundTripper) *Service {
+	s := New(paths, input, output)
+	s.decorate = decorate
+	return s
 }
 
 func (s *Service) Status(ctx context.Context, options RequestOptions) (ipgw.Status, error) {
@@ -248,12 +260,17 @@ func (s *Service) client(bindOverride, profileBind string) (*ipgw.Client, error)
 		bind = profileBind
 	}
 	var options []ipgw.Option
+	var resolved netip.Addr
 	if bind != "" {
 		ip, err := netip.ParseAddr(bind)
 		if err != nil || !ip.Is4() {
 			return nil, fmt.Errorf("bind IP %q is not a valid IPv4 address", bind)
 		}
 		options = append(options, ipgw.WithBindIP(ip))
+		resolved = ip
+	}
+	if s.decorate != nil {
+		options = append(options, ipgw.WithRoundTripper(s.decorate(transport.Default(resolved))))
 	}
 	return ipgw.NewClient(options...)
 }

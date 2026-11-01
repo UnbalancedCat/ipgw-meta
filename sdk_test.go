@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/UnbalancedCat/ipgw-meta/internal/castest"
 	"io"
 	"math/big"
 	"net/http"
@@ -202,7 +203,7 @@ func TestPasswordLoginCapturesHTTPServiceTicketWithoutSendingIt(t *testing.T) {
 				`<input name="rsa" value="PAGE-RSA-CANARY"><input name="ul" value="999">` +
 				`<input name="pl" value="999"><input name="_eventId" value="PAGE-EVENT-CANARY">` +
 				`<input name="UNTRUSTED-CONTROL-CANARY" value="FORM-VALUE-CANARY"></form>` +
-				`<script>var publicKeyStr='` + publicKey + `';</script>`
+				`<script>` + castest.LoginScript(publicKey) + `</script>`
 			return testResponse(request, http.StatusOK, html, ""), nil
 		case request.URL.Host == "pass.neu.edu.cn" && request.URL.Path == "/tpass/auth" && request.Method == http.MethodPost:
 			if request.URL.Query().Get("service") != "http://ipgw.neu.edu.cn/srun_portal_sso?ac_id=15" {
@@ -289,7 +290,7 @@ func TestPasswordLoginRejectsDuplicateDynamicStateBeforeCredentialRead(t *testin
 			page := `<form id="loginForm" action="/tpass/auth">` +
 				`<input name="lt" value="LT-FIRST"><input name="lt" value="LT-SECOND">` +
 				`<input name="execution" value="e1s1"></form>` +
-				`<script>var publicKeyStr='` + publicKey + `';</script>`
+				`<script>` + castest.LoginScript(publicKey) + `</script>`
 			return testResponse(request, http.StatusOK, page, ""), nil
 		case request.URL.Host == "pass.neu.edu.cn" && request.Method == http.MethodPost:
 			postCalls++

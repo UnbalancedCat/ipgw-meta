@@ -7,6 +7,8 @@ revision: 2026-08-28-r2
 
 本文规定 v1 的离线 acquisition、归档验证和事务激活。离线测试使用的安装器与公开 release asset 相同，不允许远端重新打包。
 
+2026-10-31 P4 增加独立 BHK 原生安装辅助记录，来源固定、工具链隔离与固定测试结果要求见 [EVID-BHK-AUX-001](bhk-acceptance.md#evid-bhk-aux-001辅助验收)。安装器接口和下述安全、事务、junction 要求不变；P4 合成回归不替代 P5 新 Candidate 记录。
+
 ## REL-INSTALL-001：离线 acquisition
 
 Unix 固定接口：

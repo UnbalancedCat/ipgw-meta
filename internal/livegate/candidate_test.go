@@ -60,6 +60,7 @@ func candidateTestManifest(candidate []byte) []byte {
 		"{\"schema_version\":1,\"plan_id\":\"IPGW-META-V1\",\"revision\":\"2026-08-28-r2\","+
 			"\"version\":\"v1.0.0\",\"candidate_id\":\"v1.0.0-0123456789ab-12345.1\","+
 			"\"source_commit\":\"0123456789abcdef0123456789abcdef01234567\","+
+			"\"test_tools\":[{\"platform\":\"linux-amd64\",\"name\":\"test-tools/ipgw-live-gate-linux-amd64\",\"size\":12,\"sha256\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},{\"platform\":\"windows-amd64\",\"name\":\"test-tools/ipgw-live-gate-windows-amd64.exe\",\"size\":12,\"sha256\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}],"+
 			"\"live_gate_targets\":["+
 			"{\"platform\":\"linux-amd64\",\"name\":\"ipgw-meta\",\"size\":%d,\"sha256\":\"%s\"},"+
 			"{\"platform\":\"windows-amd64\",\"name\":\"ipgw-meta.exe\",\"size\":%d,\"sha256\":\"%s\"}]}",

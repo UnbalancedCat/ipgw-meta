@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -109,6 +110,7 @@ func newExecuteHarness(t *testing.T, platform Platform, suite Suite) *executeHar
 		Name:               candidateName,
 		Size:               1,
 		SHA256:             explicitSHA,
+		RunnerSHA256:       strings.Repeat("d", 64),
 	}
 	current := time.Date(2026, 8, 30, 1, 2, 3, 0, time.UTC)
 	dependencies := &executeDependencies{
@@ -188,6 +190,9 @@ func newExecuteHarness(t *testing.T, platform Platform, suite Suite) *executeHar
 		Stderr:       errOut,
 		IsTTY:        true,
 		dependencies: dependencies,
+	}
+	if platform == PlatformWindowsAMD64 {
+		harness.options.Args = append(harness.options.Args, "--bind-ip", "192.0.2.10")
 	}
 	return harness
 }
@@ -294,6 +299,7 @@ func TestValidLiveGatePreflightClosesMatrixAndPaths(t *testing.T) {
 		network:           NetworkCampusWired,
 		profile:           "live-profile",
 		outputDir:         filepath.Join(root, "build", "live-evidence"),
+		bindIP:            netip.MustParseAddr("192.0.2.10"),
 	}
 	if !validLiveGatePreflight(base, PlatformWindowsAMD64) {
 		t.Fatal("documented Windows wired tuple was rejected")
@@ -305,8 +311,8 @@ func TestValidLiveGatePreflightClosesMatrixAndPaths(t *testing.T) {
 	}
 	windowsQR := base
 	windowsQR.suite = SuiteTerminalQR
-	if validLiveGatePreflight(windowsQR, PlatformWindowsAMD64) {
-		t.Fatal("undocumented Windows QR tuple was accepted")
+	if !validLiveGatePreflight(windowsQR, PlatformWindowsAMD64) {
+		t.Fatal("v2 Windows QR tuple was rejected")
 	}
 
 	linux := base

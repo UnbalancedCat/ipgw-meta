@@ -24,10 +24,10 @@ const (
 // Page contains transient values discovered from one CAS page. Hidden values
 // and QR identifiers must remain inside the authentication operation.
 type Page struct {
+	SourceURL   *url.URL
 	Action      *url.URL
 	Hidden      url.Values
 	Scripts     []*url.URL
-	PublicKey   string
 	Challenge   Challenge
 	QRUUID      string
 	QRSupported bool

@@ -5,6 +5,8 @@ revision: 2026-08-28-r2
 
 # 认证能力矩阵
 
+2026-10-31 P4：当前 evidence/promotion v2、三组 BHK 必需认证及辅助门禁见 [BHK 正式验收 v2](../operations/bhk-acceptance.md)。当前生成与晋升使用 v2；旧四组和旧格式仅在显式历史审计中生效，历史回执不重写。Candidate/release manifest 仍为 v1；格式迁移不提升真实认证能力。
+
 ## AUTH-STATUS-001：能力状态词汇
 
 | 状态 | 含义 |
@@ -25,13 +27,13 @@ revision: 2026-08-28-r2
 
 - 状态：`synthetic_covered + live_unverified`。
 - v1 行为：动态发现 CAS 表单和同源公开脚本公钥；当前官方协议的 RSA-512 PKCS#1 v1.5 字段只作为系统 PKI HTTPS 内的兼容封装，并受 [`ADR-0014`](../architecture/decisions/ADR-0014-cas-rsa-compatibility-envelope.md) 的来源、大小和明文容量约束。密码 POST 按 [`ADR-0015`](../architecture/decisions/ADR-0015-cas-submit-closed-fields.md) 只提交六个明确字段，不透传页面其他控件。经 HTTPS activation 后精确验证最终身份。
-- 发布门禁：在校园有线与无线网络各完成一次真实验证。
+- 发布门禁：同一不可变 Candidate 在 BHK Windows amd64 有线与 Wi-Fi 各完成 password_core；另须通过安装/Wi-Fi 辅助门禁，见 [BHK 正式验收](../operations/bhk-acceptance.md)。
 
 ### AUTH-QR-001：Terminal QR
 
 - 状态：`observed_anonymous + synthetic_covered + live_unverified`。
 - v1 行为：仅通过显式方法启用；由 TTY 呈现、SDK 轮询，不自动回退到其他登录方式。
-- 发布门禁：至少在一种校园网络完成真实扫码闭环。
+- 发布门禁：同一不可变 Candidate 在 BHK Windows amd64 有线完成 terminal_qr；Wi-Fi QR 与 NAS QR 只能补充，不能替代。
 
 ### AUTH-SMS-001：手机验证码
 
