@@ -5,6 +5,10 @@ revision: 2026-08-28-r2
 
 # 脱敏证据规范
 
+2026-10-31 P4：当前 evidence/promotion v2、三组 BHK 必需认证及辅助门禁见 [BHK 正式验收 v2](../operations/bhk-acceptance.md)。当前生成与晋升使用 v2；旧四组和旧格式仅在显式历史审计中生效，历史回执不重写。Candidate/release manifest 仍为 v1；格式迁移不提升真实认证能力。
+
+P2 独立开发回执遵循[产品等价开发验证](../operations/development-validation.md)，不是本页正式 Candidate evidence bundle。其 `tool_kind=auth-dev`、`release_evidence=false` 和开发源码身份不能转换成 Candidate ID、能力升级或正式 evidence；当前矩阵按 v2，历史回执语义不变。
+
 `docs/evidence/` 只保存最小、脱敏、可审计的人工验收或安全事件记录。自动化测试结果由 CI 保存，不在此复制完整日志；安全事件记录只能保存工具版本、数量、规则 ID、无秘密路径、ref/hash 结果和明确的未完成项。
 
 ## EVID-REDACT-001：绝对禁止内容
@@ -33,7 +37,7 @@ SHA256SUMS
 目录和文件权限分别为 Unix `0700/0600` 或 Windows 当前用户私有 ACL。bundle 是本地私有审核材料，不得整包提交到仓库；仓库只接收 [`EVID-REVIEW-001`](#evid-review-001人工复核与入库) 允许的固定摘要和 bundle hash。
 
 - 编码后的 `evidence.json` 必须是有效 UTF-8，大小不得超过 64 KiB（65536 字节）。
-- 顶层对象必须恰好包含下方样例的 18 个字段，每个 step 对象必须恰好包含样例的 5 个字段；所有字段都必需且只能出现一次。
+- 顶层对象必须恰好包含下方样例的 19 个字段，每个 step 对象必须恰好包含样例的 5 个字段；所有字段都必需且只能出现一次。
 - 解析必须拒绝任意层级的未知字段、缺失字段或重复 object key，拒绝无效 UTF-8，并拒绝完整顶层对象之后的另一个 JSON 值或任意非空白尾随字节；JSON grammar 允许尾随空白，canonical runner 编码必须恰好以一个 LF 结尾。
 - schema validator 只返回固定且不回显输入的错误；不得把原始值、JSON 片段、profile、路径或产品输出拼入错误。
 
@@ -49,6 +53,7 @@ SHA256SUMS
 - candidate_id: <candidate_id>
 - candidate_set_sha256: <candidate_set_sha256>
 - source_commit: <source_commit>
+- runner_sha256: <runner_sha256>
 - platform: <platform>
 - testbed: <testbed>
 - network_type: <network_type>
@@ -80,19 +85,20 @@ SHA256SUMS
 
 ## EVID-AUTH-001：认证证据字段
 
-`evidence.json` 使用 schema version 1，只允许以下结构：
+`evidence.json` 当前生成使用 schema version 2，只允许以下结构：
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "plan_id": "IPGW-META-V1",
   "revision": "2026-08-28-r2",
   "evidence_id": "EVID-YYYYMMDD-NNN",
   "candidate_id": "v1.0.0-0123456789ab-12345.1",
   "candidate_set_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "source_commit": "0123456789abcdef0123456789abcdef01234567",
-  "platform": "linux-amd64",
-  "testbed": "nas_vm",
+  "runner_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "platform": "windows-amd64",
+  "testbed": "bhk_windows",
   "network_type": "campus_wired",
   "auth_method": "password",
   "suite": "password_core",
@@ -155,7 +161,7 @@ SHA256SUMS
 }
 ```
 
-`schema_version`、`plan_id`、`revision` 必须分别精确为 `1`、`IPGW-META-V1`、`2026-08-28-r2`。
+`schema_version`、`plan_id`、`revision` 必须分别精确为 `2`、`IPGW-META-V1`、`2026-08-28-r2`。
 
 `evidence_id` 必须为 `EVID-YYYYMMDD-NNN`：日期必须是有效公历日期且等于 `started_at` 的 UTC 日期，序号为 `001` 至 `999`。`candidate_id` 必须为 `v1.0.0-<source-sha12>-<run-id>.<attempt>`：SHA 前缀是 `source_commit` 的前 12 位，run ID 与 attempt 均为无前导零的正十进制整数。`candidate_set_sha256` 必须是 64 位小写十六进制，`source_commit` 必须是 40 位小写十六进制。
 
@@ -163,7 +169,7 @@ SHA256SUMS
 
 `platform`、`testbed`、`network_type`、`auth_method`、`suite`、总体 `result` 与 step `result` 必须使用 [`REL-LIVEGATE-001`](../operations/live-validation.md#rel-livegate-001runner-接口与信任边界) 的封闭枚举和精确环境组合。
 
-capability 的封闭枚举为 `supported`、`detected_only`、`observed_anonymous`、`synthetic_covered`、`live_unverified`、`live_verified`、`unknown`。schema version 1 的数组值和顺序固定为：
+capability 的封闭枚举为 `supported`、`detected_only`、`observed_anonymous`、`synthetic_covered`、`live_unverified`、`live_verified`、`unknown`。schema version 1/2 的数组值和顺序固定为：
 
 - `password_core`：`capability_before` 为 `["synthetic_covered", "live_unverified"]`；通过后为 `["synthetic_covered", "live_verified"]`。
 - `terminal_qr`：`capability_before` 为 `["observed_anonymous", "synthetic_covered", "live_unverified"]`；通过后为 `["observed_anonymous", "synthetic_covered", "live_verified"]`。
@@ -176,10 +182,12 @@ capability 的封闭枚举为 `supported`、`detected_only`、`observed_anonymou
 
 禁止自由 `notes`、reviewer handle、命令文本、profile、username、IP、interface、URL、`details` 或原始输出。
 
+历史 v1 只读审计使用旧 18 字段、不含 runner_sha256、schema_version=1 和旧四组矩阵；不补造字段、不转换为 v2。当前 summary 必须校验 runner_sha256 与同一 Candidate helper。安装和 Wi-Fi 辅助摘要另按 [EVID-BHK-AUX-001](../operations/bhk-acceptance.md#evid-bhk-aux-001辅助验收) 校验，不能混入三项认证 ID。
+
 ## EVID-GATE-001：证据门禁
 
-- 真实证据必须满足 [`REL-LIVE-MATRIX-001`](../operations/live-validation.md#rel-live-matrix-001v1-真实网络矩阵)，password 在 NAS wired、BHK wired 和 BHK Wi-Fi 分别完成要求的闭环。
-- Terminal QR 在 NAS wired 完成一次扫码、轮询、HTTPS activation 和最终身份检查。
+- 真实证据必须满足 [`REL-LIVE-MATRIX-001`](../operations/live-validation.md#rel-live-matrix-001v1-真实网络矩阵)，password 在 BHK wired 和 BHK Wi-Fi 分别完成要求的闭环。
+- Terminal QR 在 BHK wired 完成一次扫码、轮询、HTTPS activation 和最终身份检查。
 - 异账号 conflict/switch 只有合成覆盖；OTP detected-only 不阻塞 v1，但被 OTP 阻断的必需 suite 不算通过。
 - fail/blocked 记录可以保留供审阅，但不得提升能力状态或进入 promotion lock 的通过集合。
 - 证据只对绑定的 candidate-set 有效；候选失效、协议/认证页面或核心传输实现变化后，相关能力回到 `live_unverified`。
@@ -210,9 +218,9 @@ capability 的封闭枚举为 `supported`、`detected_only`、`observed_anonymou
 
 每个进入 promotion lock 的 evidence ID 必须在 `docs/evidence/releases/v1.0.0/<evidence-id>.json` 有且仅有一份 public summary。summary 是 closed-world canonical JSON：有效 UTF-8、大小不超过 64 KiB、拒绝任意层 duplicate/unknown/missing key、第二个 JSON value 和非空白尾随字节；按下述顺序紧凑编码并以一个 LF 结尾。
 
-顶层精确包含 18 个字段：`schema_version`、`plan_id`、`revision`、`evidence_id`、`candidate_id`、`candidate_set_sha256`、`source_commit`、`platform`、`testbed`、`network_type`、`auth_method`、`suite`、`result`、`capability_before`、`capability_after`、`started_at`、`finished_at`、`bundle_sha256`。前 17 项必须逐值等于已验证私有 `evidence.json` 的同名字段；`bundle_sha256` 是按文件名原始 ASCII 字节升序连接 `<name>NUL<decimal-size>NUL<file-sha256>LF` 后计算的整个私有三文件 bundle SHA-256，name 精确为 `SHA256SUMS`、`evidence.json`、`summary.md`。禁止复制 steps、notes、reviewer、路径、命令、profile、username、IP、URL 或任何原始输出。
+顶层精确包含 19 个字段：`schema_version`、`plan_id`、`revision`、`evidence_id`、`candidate_id`、`candidate_set_sha256`、`source_commit`、`runner_sha256`、`platform`、`testbed`、`network_type`、`auth_method`、`suite`、`result`、`capability_before`、`capability_after`、`started_at`、`finished_at`、`bundle_sha256`。前 18 项必须逐值等于已验证私有 `evidence.json` 的同名字段；`bundle_sha256` 是按文件名原始 ASCII 字节升序连接 `<name>NUL<decimal-size>NUL<file-sha256>LF` 后计算的整个私有三文件 bundle SHA-256，name 精确为 `SHA256SUMS`、`evidence.json`、`summary.md`。禁止复制 steps、notes、reviewer、路径、命令、profile、username、IP、URL 或任何原始输出。
 
-`result` 必须为 `pass`，capability before/after 必须满足 [`EVID-AUTH-001`](#evid-auth-001认证证据字段) 的通过转换。Promotion 的四份 summary 必须绑定同一 candidate/source/set hash，并恰好各覆盖一次 `REL-LIVEGATE-001` 的四个允许 tuple：NAS wired password、NAS wired Terminal QR、BHK wired password、BHK Wi-Fi password；重复或缺少 tuple 均拒绝。私有 bundle 仍不得进入 Git、issue、PR、Actions artifact 或 release。
+`result` 必须为 `pass`，capability before/after 必须满足 [`EVID-AUTH-001`](#evid-auth-001认证证据字段) 的通过转换。Promotion 的三份认证 summary 必须绑定同一 candidate/source/set hash，并恰好各覆盖一次 `REL-LIVEGATE-001` 的三个必需 tuple：BHK wired password、BHK Wi-Fi password、BHK wired Terminal QR；重复或缺少 tuple 均拒绝。私有 bundle 仍不得进入 Git、issue、PR、Actions artifact 或 release。
 
 ## EVID-SECURITY-001：安全事件证据
 
@@ -222,4 +230,4 @@ capability 的封闭枚举为 `supported`、`detected_only`、`observed_anonymou
 
 ## 文件命名
 
-发布证据摘要放在 `releases/<version>/`，文件名只使用固定 evidence ID 或 `promotion-lock.json`/`release-notes.md`；安全事件使用 `YYYY-MM-DD-<event>.md`。目录中的 README 可被工具索引，但禁止生成包含秘密的调试附件。
+发布证据摘要放在 `releases/<version>/`，文件名只使用固定 evidence ID、固定辅助 AUX ID 或 `promotion-lock.json`/`release-notes.md`；安全事件使用 `YYYY-MM-DD-<event>.md`。目录中的 README 可被工具索引，但禁止生成包含秘密的调试附件。

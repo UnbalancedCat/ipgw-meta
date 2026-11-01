@@ -22,5 +22,15 @@ revision: 2026-08-28-r2
 | [ADR-0013](ADR-0013-cas-html-before-jsonp.md) | accepted | CAS challenge 先识别完整 HTML，再接受严格的整响应 JSON/JSONP envelope |
 | [ADR-0014](ADR-0014-cas-rsa-compatibility-envelope.md) | accepted | 仅在官方同源 HTTPS 内接受动态 CAS RSA-512 兼容封装 |
 | [ADR-0015](ADR-0015-cas-submit-closed-fields.md) | accepted | CAS 密码 POST 使用六字段 closed-world allowlist |
+| [ADR-0016](ADR-0016-cas-provenance-before-key-selection.md) | proposed | 先建立有界来源诊断与工具绑定，真实选键语义保持待决 |
+| [ADR-0017](ADR-0017-development-auth-validation.md) | accepted | 产品等价开发验证与正式 Candidate 证据分离 |
+| [ADR-0018](ADR-0018-development-auth-failure-observation.md) | accepted | 独立开发入口的被动认证失败分类与身份隔离 |
+| [ADR-0019](ADR-0019-anonymous-submit-context.md) | accepted | SDK 实际消费集合的匿名上下文与 parser 匹配投影 |
+| [ADR-0020](ADR-0020-bounded-static-cas-syntax.md) | accepted | 有界静态语法、字面量候选与运行时使用关系分离 |
+| [ADR-0021](ADR-0021-cas-key-use-relation.md) | accepted | 完整来源与有限登录使用关系共同决定动态取键 |
+| [ADR-0022](ADR-0022-development-logout-structure.md) | accepted | 独立开发入口的有界注销响应结构观察 |
+| [ADR-0023](ADR-0023-browser-logout-comparison.md) | accepted | Chrome 注销对照、维护者先脱敏与独立状态确认 |
+| [ADR-0024](ADR-0024-logout-explicit-callback.md) | accepted | 共享注销显式callback，保持既有业务与offline判据 |
+| [ADR-0025](ADR-0025-bhk-formal-acceptance.md) | accepted | BHK v2 正式认证、执行者绑定与辅助发布门禁 |
 
 新增或改变公共行为时新建 ADR，不改写已接受 ADR 的历史结论；被替代的记录标为 `superseded` 并链接后继记录。

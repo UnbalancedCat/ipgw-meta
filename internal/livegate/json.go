@@ -103,6 +103,9 @@ func (e *Evidence) UnmarshalJSON(raw []byte) error {
 }
 
 func EncodeEvidence(w io.Writer, evidence Evidence) error {
+	if evidence.SchemaVersion != SchemaVersion {
+		return ErrInvalidEvidenceJSON
+	}
 	if w == nil {
 		return ErrEvidenceWrite
 	}
@@ -135,6 +138,15 @@ func scanSingleJSONValue(raw []byte) error {
 		return ErrInvalidEvidenceJSON
 	}
 	return nil
+}
+
+// CheckJSONStructure is shared only by maintainer tools that must reject
+// duplicate fields, invalid UTF-8, trailing values and excessive nesting.
+func CheckJSONStructure(raw []byte, maximum int) error {
+	if maximum < 1 || len(raw) > maximum || !utf8.Valid(raw) {
+		return ErrInvalidEvidenceJSON
+	}
+	return scanSingleJSONValue(raw)
 }
 
 func scanJSONValue(decoder *json.Decoder, depth int) error {
@@ -198,7 +210,17 @@ func validateWireFields(raw []byte) error {
 	if err := json.Unmarshal(raw, &object); err != nil || object == nil {
 		return ErrInvalidEvidenceJSON
 	}
-	if !hasExactFields(object, evidenceFields[:]) {
+	var version int
+	if json.Unmarshal(object["schema_version"], &version) != nil {
+		return ErrInvalidEvidenceJSON
+	}
+	fields := append([]string(nil), evidenceFields[:]...)
+	if version == SchemaVersion {
+		fields = append(fields, "runner_sha256")
+	} else if version != HistoricalSchemaVersion {
+		return ErrInvalidEvidenceJSON
+	}
+	if !hasExactFields(object, fields) {
 		return ErrInvalidEvidenceJSON
 	}
 

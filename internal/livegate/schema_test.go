@@ -21,6 +21,7 @@ func validPasswordEvidence() Evidence {
 		CandidateID:        "v1.0.0-0123456789ab-12345.1",
 		CandidateSetSHA256: testCandidateHash,
 		SourceCommit:       testSourceCommit,
+		RunnerSHA256:       strings.Repeat("b", 64),
 		Platform:           PlatformLinuxAMD64,
 		Testbed:            TestbedNASVM,
 		NetworkType:        NetworkCampusWired,
@@ -401,6 +402,8 @@ func TestValidationMatrix(t *testing.T) {
 		{"linux_nas_wired_terminal_qr", PlatformLinuxAMD64, TestbedNASVM, NetworkCampusWired, AuthMethodTerminalQR, SuiteTerminalQR},
 		{"windows_bhk_wired_password", PlatformWindowsAMD64, TestbedBHKWindows, NetworkCampusWired, AuthMethodPassword, SuitePasswordCore},
 		{"windows_bhk_wifi_password", PlatformWindowsAMD64, TestbedBHKWindows, NetworkCampusWiFi, AuthMethodPassword, SuitePasswordCore},
+		{"windows_bhk_wired_qr", PlatformWindowsAMD64, TestbedBHKWindows, NetworkCampusWired, AuthMethodTerminalQR, SuiteTerminalQR},
+		{"windows_bhk_wifi_qr", PlatformWindowsAMD64, TestbedBHKWindows, NetworkCampusWiFi, AuthMethodTerminalQR, SuiteTerminalQR},
 	}
 	for _, test := range valid {
 		t.Run("valid_"+test.name, func(t *testing.T) {
@@ -430,8 +433,8 @@ func TestValidationMatrix(t *testing.T) {
 		{"linux_wifi_password", PlatformLinuxAMD64, TestbedNASVM, NetworkCampusWiFi, AuthMethodPassword, SuitePasswordCore},
 		{"linux_bhk_password", PlatformLinuxAMD64, TestbedBHKWindows, NetworkCampusWired, AuthMethodPassword, SuitePasswordCore},
 		{"windows_nas_password", PlatformWindowsAMD64, TestbedNASVM, NetworkCampusWired, AuthMethodPassword, SuitePasswordCore},
-		{"windows_wired_terminal_qr", PlatformWindowsAMD64, TestbedBHKWindows, NetworkCampusWired, AuthMethodTerminalQR, SuiteTerminalQR},
-		{"windows_wifi_terminal_qr", PlatformWindowsAMD64, TestbedBHKWindows, NetworkCampusWiFi, AuthMethodTerminalQR, SuiteTerminalQR},
+		{"windows_qr_with_password_steps", PlatformWindowsAMD64, TestbedBHKWindows, NetworkCampusWired, AuthMethodTerminalQR, SuiteTerminalQR},
+		{"windows_wifi_qr_with_password_steps", PlatformWindowsAMD64, TestbedBHKWindows, NetworkCampusWiFi, AuthMethodTerminalQR, SuiteTerminalQR},
 		{"auth_suite_mismatch", PlatformLinuxAMD64, TestbedNASVM, NetworkCampusWired, AuthMethodPassword, SuiteTerminalQR},
 	}
 	for _, test := range invalid {
@@ -463,7 +466,7 @@ func TestIdentifiersHashesAndTimestamps(t *testing.T) {
 		name   string
 		mutate func(*Evidence)
 	}{
-		{"schema_version", func(e *Evidence) { e.SchemaVersion = 2 }},
+		{"schema_version", func(e *Evidence) { e.SchemaVersion = 3 }},
 		{"plan_id", func(e *Evidence) { e.PlanID = "ipgw-meta-v1" }},
 		{"revision", func(e *Evidence) { e.Revision = "2026-08-28-R2" }},
 		{"evidence_id_shape", func(e *Evidence) { e.EvidenceID = "EVID-20260829-1" }},

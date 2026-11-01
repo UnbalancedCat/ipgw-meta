@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -55,14 +56,15 @@ var requiredPaths = []string{
 const stableIDPattern = `(?:[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+-[0-9]{3}|ADR-[0-9]{4})`
 
 var (
-	stableID          = regexp.MustCompile(`\b` + stableIDPattern + `\b`)
-	declarationPrefix = regexp.MustCompile(`^(` + stableIDPattern + `)(?:[ \t]|：|:|$)`)
-	headingLine       = regexp.MustCompile(`^[ \t]{0,3}(#{1,6})[ \t]+(.+?)[ \t]*$`)
-	closingHashes     = regexp.MustCompile(`[ \t]+#+[ \t]*$`)
-	markdownLink      = regexp.MustCompile(`!?\[([^\]\n]*)\]\(([^)\n]*)\)`)
-	inlineLink        = regexp.MustCompile(`!?\[([^\]\n]*)\]\([^)\n]*\)`)
-	htmlTag           = regexp.MustCompile(`<[^>]+>`)
-	explicitAnchor    = regexp.MustCompile(`(?i)<[a-z][^>]*(?:id|name)[ \t]*=[ \t]*["']([^"']+)["'][^>]*>`)
+	stableID           = regexp.MustCompile(`\b` + stableIDPattern + `\b`)
+	evidenceInstanceID = regexp.MustCompile(`^EVID-([0-9]{8})-([0-9]{3})$`)
+	declarationPrefix  = regexp.MustCompile(`^(` + stableIDPattern + `)(?:[ \t]|：|:|$)`)
+	headingLine        = regexp.MustCompile(`^[ \t]{0,3}(#{1,6})[ \t]+(.+?)[ \t]*$`)
+	closingHashes      = regexp.MustCompile(`[ \t]+#+[ \t]*$`)
+	markdownLink       = regexp.MustCompile(`!?\[([^\]\n]*)\]\(([^)\n]*)\)`)
+	inlineLink         = regexp.MustCompile(`!?\[([^\]\n]*)\]\([^)\n]*\)`)
+	htmlTag            = regexp.MustCompile(`<[^>]+>`)
+	explicitAnchor     = regexp.MustCompile(`(?i)<[a-z][^>]*(?:id|name)[ \t]*=[ \t]*["']([^"']+)["'][^>]*>`)
 )
 
 // Violation is one deterministic doccheck failure.
@@ -317,6 +319,13 @@ func analyze(root string, allowMissingIndex bool) (*analysis, error) {
 		isAgent := path == "AGENTS.md" || strings.HasPrefix(path, "agent/")
 		for _, location := range stableID.FindAllStringIndex(doc.body, -1) {
 			id := doc.body[location[0]:location[1]]
+			// EVID-AUTH-001 defines dated evidence instances, not docs owners.
+			// This only classifies a reference; it does not validate evidence.
+			if match := evidenceInstanceID.FindStringSubmatch(id); len(match) == 3 && match[2] != "000" {
+				if _, err := time.Parse("20060102", match[1]); err == nil {
+					continue
+				}
+			}
 			contextLink, contextKind := linkAt(doc.links, location[0], location[1])
 			if contextKind == "destination" {
 				continue

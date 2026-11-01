@@ -4,11 +4,14 @@ go 1.25.0
 
 require (
 	github.com/PuerkitoBio/goquery v1.12.0
+	github.com/dop251/goja v0.0.0-20261008201629-63c541af38f8
+	github.com/go-sourcemap/sourcemap v2.1.3+incompatible
 	github.com/mdp/qrterminal/v3 v3.2.1
 	github.com/zalando/go-keyring v0.2.8
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/sys v0.42.0
 	golang.org/x/term v0.41.0
+	golang.org/x/text v0.35.0
 )
 
 require (

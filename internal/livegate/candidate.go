@@ -23,6 +23,8 @@ type VerifiedCandidate struct {
 
 	candidateSnapshot privateFileSnapshot
 	manifestSnapshot  privateFileSnapshot
+	runnerPath        string
+	runnerSnapshot    privateFileSnapshot
 }
 
 // VerifyCandidateBefore securely opens and binds a candidate and its manifest.
@@ -80,6 +82,9 @@ func VerifyCandidateBefore(candidatePath, manifestPath, explicitSHA string, plat
 // VerifyAfter securely reopens both files and proves that their identity,
 // private metadata, manifest projection, size, and hashes are unchanged.
 func (verified VerifiedCandidate) VerifyAfter() error {
+	if verified.runnerPath != "" && verified.verifyRunnerAfter() != nil {
+		return ErrCandidateDrift
+	}
 	if verified.candidateSnapshot.info == nil ||
 		verified.manifestSnapshot.info == nil ||
 		!validCandidatePath(verified.CandidatePath) ||

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -51,18 +52,23 @@ func defaultExecuteDependencies() executeDependencies {
 		isTerminal: func(file *os.File) bool {
 			return file != nil && term.IsTerminal(int(file.Fd()))
 		},
-		verifyBefore: VerifyCandidateBefore,
+		verifyBefore: VerifyRunnerBefore,
 		verifyAfter: func(candidate VerifiedCandidate) error {
 			return candidate.VerifyAfter()
 		},
 		newExecutor: func(candidate VerifiedCandidate, invocation liveGateInvocation, options Options) preparedCommandExecutor {
-			return &ProcessExecutor{
+			executor := &ProcessExecutor{
 				CandidatePath: candidate.CandidatePath,
 				Profile:       invocation.profile,
+				BindIP:        invocation.bindIP,
 				Stdin:         options.Stdin,
 				Stdout:        options.Stdout,
 				Stderr:        options.Stderr,
 			}
+			if invocation.testbed == TestbedBHKWindows {
+				return newPathExecutor(executor, invocation)
+			}
+			return executor
 		},
 		publish: func(ctx context.Context, outputDir string, evidence Evidence) (PublishedBundle, error) {
 			return (BundlePublisher{OutputDir: outputDir}).PublishContext(ctx, evidence)
@@ -114,6 +120,7 @@ type liveGateInvocation struct {
 	network           NetworkType
 	profile           string
 	outputDir         string
+	bindIP            netip.Addr
 }
 
 // Execute runs the closed maintainer-only live gate. It never renders caller,
@@ -121,6 +128,22 @@ type liveGateInvocation struct {
 func Execute(ctx context.Context, options Options) GateExitCode {
 	if ctx == nil {
 		return renderGateExit(options, GateExitInternal, "", "")
+	}
+	if len(options.Args) > 0 && options.Args[0] == "audit-v1" {
+		return executeHistory(ctx, options)
+	}
+	if len(options.Args) > 0 && options.Args[0] == "summarize" {
+		if len(options.Args) != 3 || options.Args[1] != "--bundle" || options.Stdout == nil {
+			return GateExitSecurityReject
+		}
+		raw, err := PublicSummary(options.Args[2])
+		if err != nil || ctx.Err() != nil {
+			return GateExitSecurityReject
+		}
+		if _, err = options.Stdout.Write(raw); err != nil {
+			return GateExitInternal
+		}
+		return GateExitPass
 	}
 	finish := func(exit GateExitCode, result Result, evidenceID string) GateExitCode {
 		if ctx.Err() != nil {
@@ -254,7 +277,7 @@ func Execute(ctx context.Context, options Options) GateExitCode {
 }
 
 func parseLiveGateInvocation(args []string) (liveGateInvocation, bool) {
-	if len(args) != 17 || args[0] != "run" {
+	if (len(args) != 17 && len(args) != 19) || args[0] != "run" {
 		return liveGateInvocation{}, false
 	}
 	values := make(map[string]string, 8)
@@ -262,7 +285,7 @@ func parseLiveGateInvocation(args []string) (liveGateInvocation, bool) {
 		name, value := args[index], args[index+1]
 		switch name {
 		case "--candidate", "--candidate-sha256", "--candidate-manifest",
-			"--suite", "--testbed", "--network", "--profile", "--output-dir":
+			"--suite", "--testbed", "--network", "--profile", "--output-dir", "--bind-ip":
 		default:
 			return liveGateInvocation{}, false
 		}
@@ -274,7 +297,7 @@ func parseLiveGateInvocation(args []string) (liveGateInvocation, bool) {
 		}
 		values[name] = value
 	}
-	if len(values) != 8 {
+	if len(values) != 8 && len(values) != 9 {
 		return liveGateInvocation{}, false
 	}
 
@@ -291,6 +314,16 @@ func parseLiveGateInvocation(args []string) (liveGateInvocation, bool) {
 		network:           NetworkType(values["--network"]),
 		profile:           values["--profile"],
 		outputDir:         values["--output-dir"],
+	}
+	if raw, exists := values["--bind-ip"]; exists {
+		ip, err := netip.ParseAddr(raw)
+		if err != nil || !usableBindIP(ip) {
+			return liveGateInvocation{}, false
+		}
+		invocation.bindIP = ip
+	}
+	if invocation.testbed == TestbedBHKWindows && !usableBindIP(invocation.bindIP) {
+		return liveGateInvocation{}, false
 	}
 	return invocation, true
 }
@@ -351,6 +384,9 @@ func validTerminalBoundary(
 }
 
 func validLiveGatePreflight(invocation liveGateInvocation, platform Platform) bool {
+	if invocation.testbed == TestbedBHKWindows && !usableBindIP(invocation.bindIP) {
+		return false
+	}
 	if !platform.valid() ||
 		!liveGateProfilePattern.MatchString(invocation.profile) ||
 		!validLiveGatePath(invocation.candidatePath) ||
@@ -446,6 +482,7 @@ func buildLiveGateEvidence(
 		CandidateID:        binding.CandidateID,
 		CandidateSetSHA256: binding.CandidateSetSHA256,
 		SourceCommit:       binding.SourceCommit,
+		RunnerSHA256:       binding.RunnerSHA256,
 		Platform:           binding.Platform,
 		Testbed:            invocation.testbed,
 		NetworkType:        invocation.network,

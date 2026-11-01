@@ -11,10 +11,11 @@ import (
 )
 
 const (
-	SchemaVersion        = 1
-	PlanID               = "IPGW-META-V1"
-	Revision             = "2026-08-28-r2"
-	MaxEvidenceJSONBytes = 64 * 1024
+	SchemaVersion           = 2
+	HistoricalSchemaVersion = 1
+	PlanID                  = "IPGW-META-V1"
+	Revision                = "2026-08-28-r2"
+	MaxEvidenceJSONBytes    = 64 * 1024
 )
 
 var ErrInvalidEvidence = errors.New("livegate: invalid evidence")
@@ -132,7 +133,7 @@ const (
 // Timestamp is a canonical UTC RFC3339Nano timestamp ending in Z.
 type Timestamp string
 
-// Evidence is the exact version 1 evidence object.
+// Evidence retains historical v1 decoding; current emission requires v2.
 type Evidence struct {
 	SchemaVersion      int                `json:"schema_version"`
 	PlanID             string             `json:"plan_id"`
@@ -141,6 +142,7 @@ type Evidence struct {
 	CandidateID        string             `json:"candidate_id"`
 	CandidateSetSHA256 string             `json:"candidate_set_sha256"`
 	SourceCommit       string             `json:"source_commit"`
+	RunnerSHA256       string             `json:"runner_sha256,omitempty"`
 	Platform           Platform           `json:"platform"`
 	Testbed            Testbed            `json:"testbed"`
 	NetworkType        NetworkType        `json:"network_type"`
@@ -211,8 +213,12 @@ var terminalQRCapabilitiesAfter = [...]CapabilityStatus{
 }
 
 func (e Evidence) Validate() error {
-	if e.SchemaVersion != SchemaVersion {
+	if e.SchemaVersion != SchemaVersion && e.SchemaVersion != HistoricalSchemaVersion {
 		return invalidEvidence("schema version")
+	}
+	if (e.SchemaVersion == SchemaVersion && !lowerHex64Pattern.MatchString(e.RunnerSHA256)) ||
+		(e.SchemaVersion == HistoricalSchemaVersion && e.RunnerSHA256 != "") {
+		return invalidEvidence("runner hash")
 	}
 	if e.PlanID != PlanID {
 		return invalidEvidence("plan ID")
@@ -264,7 +270,7 @@ func (e Evidence) Validate() error {
 	if !e.Result.valid() {
 		return invalidEvidence("result")
 	}
-	if !validMatrix(e.Platform, e.Testbed, e.NetworkType, e.AuthMethod, e.Suite) {
+	if !validMatrixVersion(e.SchemaVersion, e.Platform, e.Testbed, e.NetworkType, e.AuthMethod, e.Suite) {
 		return invalidEvidence("validation matrix")
 	}
 	if err := validateCapabilities(e); err != nil {
@@ -343,6 +349,14 @@ func validateCandidateID(id, sourceCommit string) error {
 }
 
 func validMatrix(platform Platform, testbed Testbed, network NetworkType, auth AuthMethod, suite Suite) bool {
+	return validMatrixVersion(SchemaVersion, platform, testbed, network, auth, suite)
+}
+
+func validMatrixVersion(version int, platform Platform, testbed Testbed, network NetworkType, auth AuthMethod, suite Suite) bool {
+	if version == SchemaVersion && platform == PlatformWindowsAMD64 && testbed == TestbedBHKWindows &&
+		(network == NetworkCampusWired || network == NetworkCampusWiFi) && auth == AuthMethodTerminalQR && suite == SuiteTerminalQR {
+		return true
+	}
 	switch {
 	case platform == PlatformLinuxAMD64 &&
 		testbed == TestbedNASVM &&

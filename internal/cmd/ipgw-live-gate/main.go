@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/UnbalancedCat/ipgw-meta/internal/auxgate"
 	"github.com/UnbalancedCat/ipgw-meta/internal/cli"
 	"github.com/UnbalancedCat/ipgw-meta/internal/livegate"
 )
@@ -31,6 +32,9 @@ func runMain(
 	stderr *os.File,
 	isTTY bool,
 ) int {
+	if auxgate.Handles(args) {
+		return auxgate.Execute(ctx, livegate.Options{Args: args, Stdin: stdin, Stdout: stdout, Stderr: stderr, IsTTY: isTTY})
+	}
 	return int(livegate.Execute(ctx, livegate.Options{
 		Args:   args,
 		Stdin:  stdin,

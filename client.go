@@ -249,17 +249,17 @@ func (c *Client) request(ctx context.Context, client *http.Client, method string
 	return data, response, nil
 }
 
-func encryptCredential(username, password, encodedKey string) (string, error) {
+func parseCASPublicKey(encodedKey string) (*rsa.PublicKey, error) {
 	encodedKey = strings.TrimSpace(encodedKey)
 	if len(encodedKey) > casEncodedKeyLimit {
-		return "", fmt.Errorf("CAS public key exceeds the encoded size limit")
+		return nil, fmt.Errorf("CAS public key exceeds the encoded size limit")
 	}
 	der, err := base64.StdEncoding.DecodeString(encodedKey)
 	if err != nil {
-		return "", fmt.Errorf("CAS public key is not valid base64")
+		return nil, fmt.Errorf("CAS public key is not valid base64")
 	}
 	if len(der) > casDERKeyLimit {
-		return "", fmt.Errorf("CAS public key exceeds the DER size limit")
+		return nil, fmt.Errorf("CAS public key exceeds the DER size limit")
 	}
 	var publicKey *rsa.PublicKey
 	parsed, pkixErr := x509.ParsePKIXPublicKey(der)
@@ -267,19 +267,28 @@ func encryptCredential(username, password, encodedKey string) (string, error) {
 		var ok bool
 		publicKey, ok = parsed.(*rsa.PublicKey)
 		if !ok {
-			return "", fmt.Errorf("CAS public key is not RSA")
+			return nil, fmt.Errorf("CAS public key is not RSA")
 		}
 	} else {
 		parsedPKCS1, pkcs1Err := x509.ParsePKCS1PublicKey(der)
 		if pkcs1Err != nil {
-			return "", fmt.Errorf("CAS public key is neither valid PKIX nor PKCS#1")
+			return nil, fmt.Errorf("CAS public key is neither valid PKIX nor PKCS#1")
 		}
 		publicKey = parsedPKCS1
 	}
 	bits := publicKey.N.BitLen()
 	if bits < casRSAMinBits || bits > casRSAMaxBits {
-		return "", fmt.Errorf("CAS RSA modulus must be between %d and %d bits", casRSAMinBits, casRSAMaxBits)
+		return nil, fmt.Errorf("CAS RSA modulus must be between %d and %d bits", casRSAMinBits, casRSAMaxBits)
 	}
+	return publicKey, nil
+}
+
+func encryptCredential(username, password, encodedKey string) (string, error) {
+	publicKey, err := parseCASPublicKey(encodedKey)
+	if err != nil {
+		return "", err
+	}
+	bits := publicKey.N.BitLen()
 	plaintext := []byte(username + password)
 	var ciphertext []byte
 	if bits < casStandardMinBits {

@@ -34,6 +34,9 @@ type CandidateBinding struct {
 	Name               string
 	Size               int64
 	SHA256             string
+	RunnerName         string
+	RunnerSize         int64
+	RunnerSHA256       string
 }
 
 var candidateManifestRequiredFields = [...]string{
@@ -44,6 +47,7 @@ var candidateManifestRequiredFields = [...]string{
 	"candidate_id",
 	"source_commit",
 	"live_gate_targets",
+	"test_tools",
 }
 
 var candidateTargetFields = [...]string{
@@ -68,6 +72,7 @@ type candidateManifestProjection struct {
 	candidateID   string
 	sourceCommit  string
 	targets       [2]candidateTarget
+	tools         [2]candidateTarget
 }
 
 type candidateManifestSource struct {
@@ -121,8 +126,10 @@ func DecodeCandidateManifest(r io.Reader, platform Platform) (CandidateBinding, 
 	}
 
 	selected := projection.targets[0]
+	helper := projection.tools[0]
 	if platform == PlatformWindowsAMD64 {
 		selected = projection.targets[1]
+		helper = projection.tools[1]
 	}
 	return CandidateBinding{
 		CandidateID:        projection.candidateID,
@@ -132,6 +139,9 @@ func DecodeCandidateManifest(r io.Reader, platform Platform) (CandidateBinding, 
 		Name:               selected.name,
 		Size:               selected.size,
 		SHA256:             selected.sha256,
+		RunnerName:         helper.name,
+		RunnerSize:         helper.size,
+		RunnerSHA256:       helper.sha256,
 	}, nil
 }
 
@@ -197,11 +207,17 @@ func decodeCandidateManifestObject(
 			}
 			projection.sourceCommit = value
 		case "live_gate_targets":
-			targets, ok := decodeCandidateTargets(decoder)
+			targets, ok := decodeCandidateTargets(decoder, false)
 			if !ok {
 				return candidateManifestProjection{}, false
 			}
 			projection.targets = targets
+		case "test_tools":
+			items, ok := decodeCandidateTargets(decoder, true)
+			if !ok {
+				return candidateManifestProjection{}, false
+			}
+			projection.tools = items
 		default:
 			if !skipCandidateManifestValue(decoder, 1) {
 				return candidateManifestProjection{}, false
@@ -220,7 +236,7 @@ func decodeCandidateManifestObject(
 	return projection, true
 }
 
-func decodeCandidateTargets(decoder *json.Decoder) ([2]candidateTarget, bool) {
+func decodeCandidateTargets(decoder *json.Decoder, helper bool) ([2]candidateTarget, bool) {
 	var decoded [2]candidateTarget
 	token, ok := candidateManifestToken(decoder)
 	if !ok || token != json.Delim('[') {
@@ -231,7 +247,7 @@ func decodeCandidateTargets(decoder *json.Decoder) ([2]candidateTarget, bool) {
 	valid := true
 	for decoder.More() {
 		if count < len(decoded) {
-			target, targetOK := decodeCandidateTarget(decoder, count)
+			target, targetOK := decodeCandidateTarget(decoder, count, helper)
 			if !targetOK {
 				return [2]candidateTarget{}, false
 			}
@@ -254,6 +270,7 @@ func decodeCandidateTargets(decoder *json.Decoder) ([2]candidateTarget, bool) {
 func decodeCandidateTarget(
 	decoder *json.Decoder,
 	index int,
+	helper bool,
 ) (candidateTarget, bool) {
 	var target candidateTarget
 	token, ok := candidateManifestToken(decoder)
@@ -321,6 +338,9 @@ func decodeCandidateTarget(
 
 	expectedPlatforms := [...]Platform{PlatformLinuxAMD64, PlatformWindowsAMD64}
 	expectedNames := [...]string{"ipgw-meta", "ipgw-meta.exe"}
+	if helper {
+		expectedNames = [...]string{"test-tools/ipgw-live-gate-linux-amd64", "test-tools/ipgw-live-gate-windows-amd64.exe"}
+	}
 	if index < 0 || index >= len(expectedPlatforms) ||
 		target.platform != expectedPlatforms[index] ||
 		target.name != expectedNames[index] ||

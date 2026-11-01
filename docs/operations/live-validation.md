@@ -5,7 +5,9 @@ revision: 2026-08-28-r2
 
 # 真实校园网验收规范
 
-真实认证只用于验证冻结候选，不用于协议探索或采集原始响应。维护者在私有 TTY 中完成所有凭据和二维码交互；runner 只能生成固定白名单证据。
+2026-10-31 P4：当前 evidence/promotion v2、三组 BHK 必需认证及辅助门禁见 [BHK 正式验收 v2](bhk-acceptance.md)。当前生成与晋升使用 v2；旧四组和旧格式仅在显式历史审计中生效，历史回执不重写。Candidate/release manifest 仍为 v1；格式迁移不提升真实认证能力。
+
+本页定义正式发布验收：只验证冻结候选，不采集原始响应。维护者在私有 TTY 中完成所有凭据和二维码交互；runner 只能生成固定白名单证据。另行授权的独立开发验证遵循 [ADR-0017](../architecture/decisions/ADR-0017-development-auth-validation.md) 和[开发验证契约](development-validation.md)，其回执不能替代本页 evidence，正式验收须另外取得三组 v2 认证及两项辅助通过摘要。
 
 ## REL-LIVEGATE-001：Runner 接口与信任边界
 
@@ -20,6 +22,7 @@ ipgw-live-gate run
   --testbed nas_vm|bhk_windows
   --network campus_wired|campus_wifi
   --profile NAME
+  --bind-ip IPv4  (BHK 必需；NAS 可省略)
   --output-dir ABS_PATH
 ```
 
@@ -27,7 +30,7 @@ ipgw-live-gate run
 
 ### Candidate-manifest v1 runner projection
 
-`--candidate-manifest` 指向的 candidate-manifest v1 顶层必须包含以下 runner projection；七个字段都必需且各出现一次。未来 `WP-M3-CANDIDATE` 可以增加其他顶层字段，但不得改变这些字段的类型或语义：
+`--candidate-manifest` 指向的 candidate-manifest v1 顶层必须包含以下 runner projection；八个字段都必需且各出现一次。未来 `WP-M3-CANDIDATE` 可以增加其他顶层字段，但不得改变这些字段的类型或语义：
 
 | 字段 | runner 约束 |
 |---|---|
@@ -38,6 +41,7 @@ ipgw-live-gate run
 | `candidate_id` | `v1.0.0-<source-sha12>-<positive-run-id>.<positive-attempt>`；两个十进制数无前导零 |
 | `source_commit` | 40 位小写十六进制，且前 12 位等于 `candidate_id` 的 source-sha12 |
 | `live_gate_targets` | 下表规定的数组 |
+| `test_tools` | 固定 Linux/Windows helper 两项，详见 [EVID-BHK-002](bhk-acceptance.md#evid-bhk-002版本与绑定) |
 
 `live_gate_targets` 必须恰好包含两个对象并保持固定顺序；每个对象恰好包含一次 `platform`、`name`、`size`、`sha256`，不得包含其他字段。`size` 是 `1..67108864` 的 JSON 整数，`sha256` 是 64 位小写十六进制：
 
@@ -54,7 +58,7 @@ candidate-manifest 与 candidate 都必须是私有本地目录内的绝对、�
 
 传输到 testbed 前仍须使用 GitHub artifact digest 与 provenance attestation 提供的可信 digest 复核 candidate-manifest 和 candidate；runner 的本地校验只记录 candidate/source/hash 绑定，不能自行建立 GitHub provenance。
 
-schema version 1 的运行环境字段是封闭枚举：
+evidence schema version 2 的运行环境字段是封闭枚举：
 
 - `platform`：`linux-amd64`、`windows-amd64`；
 - `testbed`：`nas_vm`、`bhk_windows`；
@@ -71,6 +75,8 @@ schema version 1 的运行环境字段是封闭枚举：
 | `linux-amd64` | `nas_vm` | `campus_wired` | `terminal_qr` | `terminal_qr` |
 | `windows-amd64` | `bhk_windows` | `campus_wired` | `password` | `password_core` |
 | `windows-amd64` | `bhk_windows` | `campus_wifi` | `password` | `password_core` |
+| `windows-amd64` | `bhk_windows` | `campus_wired` | `terminal_qr` | `terminal_qr` |
+| `windows-amd64` | `bhk_windows` | `campus_wifi` | `terminal_qr` | `terminal_qr` |
 
 上述 tuple 校验只约束 live-gate wire schema；它本身不满足 [`REL-LIVE-MATRIX-001`](#rel-live-matrix-001v1-真实网络矩阵) 另行要求的 Windows 原生离线安装，以及 BHK Wi-Fi 的 bind IP、network list/scan 验收。
 
@@ -176,17 +182,17 @@ runner 退出码固定为：0 suite pass；10 gate fail；11 blocked；12 securi
 
 | 环境 | 必须执行 |
 |---|---|
-| NAS Ubuntu / campus wired | password-core、same-account、logout 幂等、Terminal QR |
-| BHK Windows / campus wired | password-core、Windows 原生离线安装 |
-| BHK Windows / campus Wi-Fi | password-core、bind IP、network list/scan |
+| NAS Ubuntu / campus wired（可选） | password-core 或 Terminal QR；不能替代 BHK 必需项 |
+| BHK Windows / campus wired | password-core、Terminal QR、独立 Windows 原生安装辅助记录 |
+| BHK Windows / campus Wi-Fi | password-core、独立 Wi-Fi 辅助记录（bind IP、network list/scan） |
 | GitHub macOS runners | 安装和 CLI smoke；不声明校园网认证 |
 
-只有一个授权校园账号，因此异账号 conflict/switch 只做合成测试并保持 `synthetic_covered + live_unverified`；不借用第二账号且不阻塞 v1。Terminal QR 只要求 NAS wired 完成一次真实闭环。OTP detected-only 不阻塞 v1，但 OTP 阻断的 password/QR 运行不能算通过。
+只有一个授权校园账号，因此异账号 conflict/switch 只做合成测试并保持 `synthetic_covered + live_unverified`；不借用第二账号且不阻塞 v1。Terminal QR 必需 BHK wired 完成一次真实闭环；NAS wired 与 BHK Wi-Fi QR 仅可选。OTP detected-only 不阻塞 v1，但 OTP 阻断的 password/QR 运行不能算通过。
 
 ## REL-TRANSFER-001：候选下载与远端传输
 
 1. 本地 Windows 按精确 artifact ID 下载 candidate-set，验证 GitHub attestation、artifact digest、candidate-set SHA、manifest 和目标文件 SHA。
 2. 将验证后的 candidate-set 保存为只读本地副本；记录 candidate ID/hash，不保存账号或网络标识。
-3. 只通过 SCP 把所需平台 binary、对应 helper、manifest 和 checksums 发送到远端私有目录；不传源码、`.git`、GitHub token、秘密历史或备份。
+3. BHK 本机使用经校验的私有副本，无需笔记本或 NAS 中转；只有选择可选 NAS 采集时，才只通过 SCP 把所需平台 binary、对应 helper、manifest 和 checksums 发送到远端私有目录；不传源码、`.git`、GitHub token、秘密历史或备份。
 4. 远端在运行前重新验证相同 SHA；不得 build、package、strip、sign 或改写候选。
 5. 结果只回传经 [`EVID-REVIEW-001`](../evidence/README.md#evid-review-001人工复核与入库) 审阅的固定字段摘要和 evidence bundle hash。

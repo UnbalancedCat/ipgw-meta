@@ -8,7 +8,68 @@ release_policy: gate_based
 
 # IPGW-Meta v1 分阶段执行与远程验收计划
 
-本文是 `IPGW-META-V1` 的权威执行计划。发布以门禁为准，不以日期为准；每个执行窗口最多 30–45 分钟，到点必须停止、验证并交接。
+本文是 `IPGW-META-V1` 的权威执行计划。发布以门禁为准，不以日期为准。2026-10-28 维护者明确取消本机离线开发的 30–45 分钟强制停顿：在已授权范围内持续实施、验证和记录，只有完成范围、实际阻塞或需要新的授权时停止。真实网络及高风险操作仍遵循独立审批边界。
+
+<a id="roadmap-20261029"></a>
+
+## 0. 2026-10-29 当前认证收敛 Roadmap
+
+本节是当前开发优先级与后续工作包的唯一 roadmap。主线为：**以旧版可用流程作行为对照，修复现有 v1 共享认证实现，完成真实登录闭环，再完成正式发布验收。** 不回退到另一条产品线，不预设旧版只能依靠不安全行为工作。
+
+权威源码目录为 BHKDesktop `D:\project\Go\IPGW-Meta`；Windows 原生与同机 Ubuntu WSL 使用已经建立的开发环境，不依赖 BHKLAPTOP，不重复迁移或初始化。当前事实与证据等级见[实施状态](status.md#status-20261029)，执行索引见[工作包索引](../../agent/plans/stabilization-v1.md#auth-roadmap-work-packages)。
+
+### 0.1 当前有效规则、已确认目标与切换条件
+
+| 层次 | 当前解释 |
+|---|---|
+| 当前有效约束 | 现有安全、协议、正式 Candidate/live-gate/evidence/promotion 规范及工具继续生效；正式验收迁移以 [P4 v2 增量契约](../operations/bhk-acceptance.md) 为准，下文四组规则保留用于 v1 历史解释。历史执行步骤不构成重新迁移、重建或真实操作授权。 |
+| 已确认目标 | 开发认证验证与正式验收分开；未来诊断采用产品默认系统 PKI；BHK 独立完成三组正式认证证据，NAS 不再是目标路线的强制依赖。 |
+| 切换条件 | P2/P4 的对应规范、ADR、实现与回归同步完成并验收后，分别切换其规则。此 roadmap 的批准不表示现有工具已经支持目标，也不自动接受尚为 proposed 的 ADR。 |
+
+2026-10-29 后续执行：P1 行为对照及 P2 实现/专项离线验收已交付。独立开发入口现按 [ADR-0017](../architecture/decisions/ADR-0017-development-auth-validation.md) 和[开发验证契约](../operations/development-validation.md)生效；这不授予真实运行权限。Windows 安装/junction 的历史缺口及 P4 后续复核见[当前状态](status.md#status-20261031-p4)。2026-10-31 [P4 v2 契约](../operations/bhk-acceptance.md) 的实现与离线验收已交付，报告及未覆盖项见 [P4 记录](../research/p4-bhk-gates-2026-10-31.md)；旧四组仅用于 v1 历史审计，当前发布输出禁止混入 v1。下一阶段为单独授权的 P5，新 Candidate 及正式证据尚未取得。
+
+D4–D15 证书与 CTL 专项诊断退出默认开发主线，代码、包、历史决策和结果全部保留。仅当新证据表明其直接阻塞产品认证，且明确了待区分的认证假设、所需观察与退出条件时，才重新安排相应工作。诊断安全与解析覆盖测试通过不等于服务端流程正确；受限诊断 TLS 失败也不能直接登记为产品默认系统 TLS 缺陷。不得默认继续扩展自建 Windows 信任引擎或通用 JavaScript 执行器。
+
+### 0.2 工作包、依赖与退出条件
+
+| 阶段 / WP | 依赖 | 工作与交付 | 退出条件 |
+|---|---|---|---|
+| P0 / `WP-AUTH-ROADMAP-DOCS` | 已批准本次文档方案 | 更新本计划、日期化状态摘要、执行索引和最小导航；保留历史。 | 当前规则与目标规则区分明确；doccheck、链接及定向脱敏检查通过；本次到此交付，不执行 P1–P5。 |
+| P1 / `WP-AUTH-BASELINE` | P0 | 本地 v0.1.3 为主要对照，归档桌面版本为辅助；核对匿名入口、ac_id/service、TLS、Cookie 会话、页面/脚本取键、加密、表单、重定向、activation、最终状态。 | 形成逐项“相同 / 差异 / 未知”矩阵，关联源码与可区分假设的验证方法；未证明的根因保持未知。 |
+| P2 / `WP-AUTH-VALIDATION-PATH` | P1 | 先更新对应协议、安全、开发验证/evidence 规范及 ADR，再实现产品等价的最小观测与源码/哈希绑定的开发验证路径。 | 合成回归证明观测不改变请求语义、凭据处理和成功判据；开发回执与正式 Candidate evidence 分开；当前有效规则的切换有完整验收记录。 |
+| P3 / `WP-AUTH-MINIMAL-FIX` | P1、P2 | 对独立复现和规范共同支持的缺陷增加回归并最小修复共享认证；取键语义变化先形成规范决策。 | 正常与负面合成场景通过；另行授权的开发认证验证完成目标账号状态闭环。失败按环境、实现或协议证据不足分类，不放宽期望或安全限制求通过。 |
+| P4 / `WP-AUTH-BHK-GATES` | P0；可与 P1–P3 离线工作并行，协调共享文档 | 同步迁移发布/实验室/真实验证/认证能力/evidence 规范、相关 ADR、runner/schema、promotion 及回归，落实下述三组目标。 | 三组 v2 认证及安装/Wi-Fi 两项辅助门禁被各层一致接受；helper 自绑定、测试路径监测、历史 v1 只读审计与负面回归闭合；Windows 安装/junction 离线缺口解决。详见 [P4 契约](../operations/bhk-acceptance.md)，不把历史 Linux/NAS 结果改写为 Windows。 |
+| P5 / `WP-AUTH-CANDIDATE-ACCEPTANCE` | P3、P4；现行其他发布 hard gate | 完成全仓质量门禁、六平台构建及原生安装验证；经后续授权流程进入受保护 main 和正式 CI，产生并验收新不可变 Candidate。 | Candidate 身份、正式 evidence、promotion 与签名发布条件全部闭合后才更新对应里程碑；开发登录成功不能替代正式验证。 |
+
+P1 先做只读行为对照，不默认运行旧版登录或读取旧凭据。历史研究引用与当前 tag 的提交映射另行核对；不能唯一识别最早 Gemini 版本时保留不确定性，不因名称不确定停止可进行的源码比较。P3 不预设首键、第二键正确，也不预设所有多键页面均应拒绝；必须核对实际使用关系、会话和提交上下文，不能仅凭 HTTP 500 断定公钥错误。
+
+2026-10-31 执行补记：动态取键修复及 [ADR-0024](../architecture/decisions/ADR-0024-logout-explicit-callback.md) callback修复后，BHK有线开发password_core七步已在单次私有窗口通过，见[开发闭环回执](status.md#status-20261031-password-dev-pass)。P4正式验收规则迁移及离线验收也已交付，接下来的主线为按P5形成新的不可变Candidate并验收；不把开发包或离线门禁通过当作P5完成，不默认重复浏览器或CTL诊断。本补记不授权提交、发布或新的真实网络窗口。
+
+### 0.3 已锁定的验证目标（P2/P4 入口已交付，P5 正式证据待取得）
+
+**开发验证与正式验证分开。** 开发包用于快速检验修复，绑定精确源码快照与产物哈希，回执明确标为非发布证据，不提升 Candidate 能力状态。凭据由维护者在私有 TTY 输入，Agent 不处理凭据。成功仍以 [PROTO-LOGIN-001](../architecture/protocol-correctness.md#proto-login-001登录成功不变量) 为准，并验证相应幂等与注销后 offline 状态；不得用公网连通性替代账号状态。正式验收继续使用不可变 Candidate，不复用开发字节冒充既有 Candidate。P2 先建立相应规范与工具支持，再单独申请真实验证授权。
+
+**未来诊断采用产品默认系统 PKI。** 应用层保留请求数量、时间和停止预算，不禁用 TLS 验证、不新增信任。Windows 系统验证可能获取证书或更新缓存，应用层计数不能宣称覆盖全部操作系统 DNS/TCP 流量；这些影响必须写入未来真实窗口的范围与确认。本次文档更新不授权调用系统链引擎或网络。Windows 专用 CTL 辅助诊断不成为 Linux/macOS 产品认证的依赖。
+
+**BHK 发布目标为以下精确三组正式认证证据：**
+
+| 平台 / testbed | 网络 | auth_method | suite |
+|---|---|---|---|
+| windows-amd64 / bhk_windows | campus_wired | password | password_core |
+| windows-amd64 / bhk_windows | campus_wifi | password | password_core |
+| windows-amd64 / bhk_windows | campus_wired | terminal_qr | terminal_qr |
+
+表中为 evidence 枚举；runner 参数拼写仍以实际生效接口为准。Wi-Fi QR 仅为补充，不替代有线 QR。NAS 不再是目标路线强制依赖，v1 四组规则仅在显式历史审计中使用，不能直接用 Windows QR 填充旧 NAS tuple；P4 未全部验收时不得进入 P5。
+
+Linux 保留共享实现、合成测试、race 和原生安装门禁；无真实校园验收时保持 `live_unverified`。macOS 构建与安装通过不等于原生认证通过，Windows evidence 不能替代其他平台。六平台构建、原生安装、Wi-Fi 绑定与 network list/scan 等其他门禁不因减少正式认证 tuple 而被删除。
+
+### 0.4 验收纪律与当前交付边界
+
+- P0 只改文档并做文档检查、链接检查、定向脱敏扫描；稳定 ID 索引仅在需要时由既有生成入口更新，不手工编辑。不改产品 SDK/CLI/JSON/退出码或认证能力声明，不启动产品测试、校园诊断、Candidate、提交、推送或发布。
+- 历史 handoff、旧包及日期明确的状态正文保留；status 新摘要是当前事实入口。D15 单次真实授权已经消耗，任何历史授权均不自动续期。
+- 已批准范围内离线工作连续推进，不以固定工作时长、测试数量或诊断版本数量为目标。只有新的实质性语义决策、材料缺口或真实操作授权需要维护者参与。
+- 每项诊断说明它区分哪一个认证假设；没有输入变化或预期信息增益时不重复同包同结果。不通过删除测试、改变期望或放宽安全边界关闭缺陷。
+- P0 交付窗口的首个后续工作包为 P1；随后 P1/P2 已按独立指令执行，P3 开发闭环与 P4 离线交付已完成，当前下一主线为经授权的 P5。开发工具或开发成功不表示正式 `password_core` 或 M3 已完成。
 
 ## 1. 总体目标、安全边界与职责
 
@@ -30,8 +91,8 @@ release_policy: gate_based
 
 - 第一执行窗口只做只读冻结前检，不创建提交或修改 refs。
 - 高风险动作分别确认：凭据、网络/会话、历史重写、强制推送、仓库改名、规则保护、正式发布、敏感备份删除。
-- GitHub 仓库最终为 `UnbalancedCat/ipgw-meta`；新权威本地工作区为 `D:\project\Go\ipgw-meta-clean`。
-- 旧 `D:\project\Go\IPGW-Meta` 在 clean clone 验证后隔离，不再用于开发。
+- GitHub 仓库最终为 `UnbalancedCat/ipgw-meta`。2026-10-28 迁移后，权威源码目录为 BHKDesktop `D:\project\Go\IPGW-Meta`；开发入口见[本机开发与合成测试](../operations/development.md)。
+- 迁移前的 `D:\project\Go\ipgw-meta-clean` 约定属于笔记本历史；台式机旧仓库已归档为 `D:\project\Go\IPGW-Meta.archive-20261028-165538`。不得按历史路径重新迁移或归档当前工作区。
 - `v1.0.0` 使用专用 SSH 签名 annotated tag，并为候选和发布资产生成 GitHub artifact attestation。
 - 历史清理和小写改名后严格保护 `main`：要求 PR、严格 CI、签名提交，阻止删除和 force-push，并约束 `v*` tag 更新/删除。
 - 只有一个授权校园账号。真实环境不测试异账号 conflict/switch；它保持 `synthetic_covered + live_unverified`，不阻塞 v1。
@@ -44,7 +105,7 @@ release_policy: gate_based
 
 维护者负责 GitHub、ZOS、物理线缆、网络切换和外部系统操作；在私有终端输入密码、扫描二维码；管理 SSH 签名私钥并创建最终签名 tag；对每项高风险动作逐项批准；审阅脱敏 evidence 后决定入库摘要。
 
-执行 Agent 负责仓库审计、规范、代码、测试、候选构建和哈希验证；提供 ZOS/VM/远端任务清单；协调本地、NAS 和 BHK 短任务；只解析固定白名单结果，不接触密码、验证码、QR payload 或原始认证响应；每个窗口结束后停止并报告结果、阻塞和下一步。
+执行 Agent 负责仓库审计、规范、代码、测试、候选构建和哈希验证；提供 ZOS/VM/远端任务清单；协调本地、NAS 和 BHK 任务；只解析固定白名单结果，不接触密码、验证码、QR payload 或原始认证响应；在检查点记录结果、阻塞和下一步，本机离线开发不因检查点到达而强制停止。
 
 外部 CI 可在窗口结束后继续运行，但本地只记录 workflow/run ID，不持续等待；下一窗口再读取结果。
 
@@ -200,13 +261,15 @@ AGENTS.md
 ### 3.2 窗口规则
 
 1. 开始时声明唯一 WP、允许修改范围、停止条件。
-2. 原则上 35 分钟内执行，最后约 10 分钟验证和交接。
+2. 本机离线开发按已授权范围持续推进，随工作包完成验证和交接，不再以 35 分钟为强制停点；执行约定见 [`REL-WINDOW-001`](../operations/release.md#rel-window-001执行范围与检查点)。
 3. 不在窗口末开启新的高风险动作。
 4. 超时测试停止或转为外部 CI run ID，不持续等待。
 5. 窗口结束时不得存在后台登录/QR 轮询、未知活动校园网会话、半完成 ref 更新、未处理安装事务或未说明敏感临时文件。
 6. 高风险动作必须在对应窗口再次取得批准。
 
 ### 3.3 工作包顺序
+
+以下保留 r2 原始工作包编排，不是当前待执行队列。已完成迁移、环境和 RC-BUILD 不重复执行；当前优先级及新增依赖以[本页日期化 roadmap](#roadmap-20261029)为准，正式门禁的变更仍须完成 P4。
 
 | 顺序 | WP | 内容与停点 |
 |---:|---|---|
@@ -339,6 +402,8 @@ runner 退出码：0 suite pass；10 gate fail；11 blocked；12 security reject
 
 ### 4.4 NAS/BHK 拓扑
 
+以下保留原 NAS 实验室拓扑及迁移前职责描述。BHKDesktop 当前已是本机开发主机，WSL 可执行离线 Linux 开发/测试，见[本机开发入口](../operations/development.md)；“只协调/不放源码/WSL 只做准备”不适用于当前权威开发目录。正式测试面隔离规则未因此取消；BHK 三组发布目标须待 P4 生效。
+
 ```mermaid
 flowchart LR
     L["本地 Windows<br/>协调、下载、验证、SCP"] --> C["NAS 管理 Ubuntu VM<br/>Codex + SSH"]
@@ -379,6 +444,8 @@ secret scan
 Promotion 测试必须证明 tag job 不运行 setup-go/build/package；artifact ID/digest/hash 或构建输入变化立即失败；不得覆盖已有单资产；draft 上传后重新下载逐项核验；attestation 失败即停止。
 
 ### 5.2 真实网络矩阵
+
+本节为 P4 迁移前仍有效的矩阵；已确认的三组 BHK 目标见[当前 roadmap](#roadmap-20261029)，不能据目标提前放行现有 runner 或 promotion。
 
 | 环境 | 必须执行 |
 |---|---|

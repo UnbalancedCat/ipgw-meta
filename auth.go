@@ -15,6 +15,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/UnbalancedCat/ipgw-meta/internal/cas"
+	"github.com/UnbalancedCat/ipgw-meta/internal/caskey"
 	"github.com/UnbalancedCat/ipgw-meta/internal/srun"
 	securetransport "github.com/UnbalancedCat/ipgw-meta/internal/transport"
 )
@@ -149,44 +150,64 @@ func (c *Client) passwordLogin(ctx context.Context, client *http.Client, request
 	if err := validateSameHTTPSOrigin(page.Action, c.endpoints.casLogin); err != nil {
 		return LoginResult{}, err
 	}
-	publicKey := page.PublicKey
-	if publicKey == "" {
-		var candidates []*url.URL
-		for _, script := range page.Scripts {
-			if err := validateSameHTTPSOrigin(script, c.endpoints.casLogin); err != nil {
-				continue
-			}
-			lowerPath := strings.ToLower(script.Path)
-			if !strings.Contains(lowerPath, "login") && !strings.Contains(lowerPath, "rsa") {
-				continue
-			}
+	inline, scripts, sourceErr := cas.KeySources(page.SourceURL, pageData)
+	if sourceErr != nil {
+		return LoginResult{}, newError(CodeProtocolChanged, "CAS script coverage is unsupported", false, nil)
+	}
+	var candidates []*url.URL
+	for _, script := range scripts {
+		if err := validateSameHTTPSOrigin(script, c.endpoints.casLogin); err != nil {
+			continue
+		}
+		lowerPath := strings.ToLower(script.Path)
+		if strings.Contains(lowerPath, "login") || strings.Contains(lowerPath, "rsa") {
 			candidates = append(candidates, script)
 		}
-		if len(candidates) > maxDynamicScriptCandidates {
-			return LoginResult{}, newError(CodeProtocolChanged, "CAS advertised too many dynamic login scripts", false, nil)
+	}
+	if len(candidates) > maxDynamicScriptCandidates {
+		return LoginResult{}, newError(CodeProtocolChanged, "CAS advertised too many dynamic login scripts", false, nil)
+	}
+	collector := &caskey.Collector{}
+	analyze := func(data []byte) error {
+		if err := collector.Add(ctx, data); err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return err
+			}
+			return wrapError(CodeProtocolChanged, "CAS key use relation is incomplete", false, err)
 		}
-		for _, script := range candidates {
-			data, _, err := c.request(ctx, client, http.MethodGet, script, nil, scriptResponseLimit)
-			if err != nil {
-				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					return LoginResult{}, err
-				}
-				continue
+		return nil
+	}
+	for _, data := range inline {
+		if err := analyze(data); err != nil {
+			return LoginResult{}, err
+		}
+	}
+	for _, script := range candidates {
+		data, _, err := c.request(ctx, client, http.MethodGet, script, nil, scriptResponseLimit)
+		if err != nil {
+			return LoginResult{}, err
+		}
+		if err := analyze(data); err != nil {
+			return LoginResult{}, err
+		}
+	}
+	publicKey := ""
+	for _, candidate := range collector.Keys {
+		parsed, err := parseCASPublicKey(candidate)
+		if err != nil {
+			return LoginResult{}, wrapError(CodeProtocolChanged, "CAS public key is invalid", false, err)
+		}
+		if publicKey != "" {
+			previous, _ := parseCASPublicKey(publicKey)
+			if previous.N.Cmp(parsed.N) != 0 || previous.E != parsed.E {
+				return LoginResult{}, newError(CodeProtocolChanged, "CAS key use relation is ambiguous", false, nil)
 			}
-			if publicKey = cas.ExtractPublicKey(data); publicKey != "" {
-				break
-			}
+		} else {
+			publicKey = candidate
 		}
 	}
 	if publicKey == "" {
-		challenge, challengeErr := detectAuthenticationChallenge(pageData)
-		if challengeErr != nil {
-			return LoginResult{}, challengeErr
-		}
-		if challenge != cas.ChallengeNone {
-			return LoginResult{}, c.challengeError(ctx, request.Method, challenge)
-		}
-		return LoginResult{}, newError(CodeProtocolChanged, "CAS public key was not discovered", false, nil)
+		return LoginResult{}, newError(CodeProtocolChanged, "CAS public key use relation was not discovered", false, nil)
 	}
 	credential, err := request.Credentials.Credential(ctx, CredentialRequest{Username: request.ExpectedUsername, Purpose: CredentialPurposeLogin})
 	if err != nil {
@@ -461,6 +482,9 @@ func (c *Client) logoutOnline(ctx context.Context, client *http.Client, username
 	query := target.Query()
 	query.Set("action", "logout")
 	query.Set("username", username)
+	// Request a JSONP representation without changing the existing decoder or
+	// business/offline checks. This identifier contains no per-session data.
+	query.Set("callback", "ipgw_logout")
 	target.RawQuery = query.Encode()
 	data, _, err := c.request(ctx, client, http.MethodGet, target, nil, apiResponseLimit)
 	if err != nil {

@@ -1,0 +1,42 @@
+{
+  "module": "github.com/dop251/goja",
+  "version": "v0.0.0-20261008201629-63c541af38f8",
+  "module_sum": "h1:OrBT08c059KSn2HsTX43Xb1hx3b81UxNmJ9mprCySIs=",
+  "files": [
+    {
+      "file": "error.go",
+      "upstream_sha256": "d99bd1118c9f08fc8f796796ec282e62029f5231097c126356bfefb1c304f51c",
+      "derived_sha256": "d99bd1118c9f08fc8f796796ec282e62029f5231097c126356bfefb1c304f51c"
+    },
+    {
+      "file": "expression.go",
+      "upstream_sha256": "874210a71964534e49920ce6dcff74a29e76ba0e029fc50869ccb15440b61b60",
+      "derived_sha256": "ecf5373976e66d142008838d9463bef18a9e8e9de33f47e708b2f2ef09bcafc6"
+    },
+    {
+      "file": "lexer.go",
+      "upstream_sha256": "7ba7c02cf5c669481eed698c6de08ed9db5454ab8511db53f0e722a324d1d7a2",
+      "derived_sha256": "f77ee390375482af5447bf4902dd3065d67ffe86cdc2d94950e4710121f1ddcc"
+    },
+    {
+      "file": "parser.go",
+      "upstream_sha256": "e6bde5f51bdd9894bd40d94b9d14786b6abc43f7f0b9b4aa37cc14c64959f58e",
+      "derived_sha256": "fca7a2b7084fd35f8f6265e5c7edf1e68c882bb83eede2c969c2e35b9de31bf2"
+    },
+    {
+      "file": "regexp.go",
+      "upstream_sha256": "bcea9df8db41273f3db60b60d10c5f84c4c94c5386cf30729b5811653ed5fdc2",
+      "derived_sha256": "bcea9df8db41273f3db60b60d10c5f84c4c94c5386cf30729b5811653ed5fdc2"
+    },
+    {
+      "file": "scope.go",
+      "upstream_sha256": "0c0060d2e73a948507a5aaa566cda204f7c3b931dd904b08c25625440e7287cd",
+      "derived_sha256": "0c0060d2e73a948507a5aaa566cda204f7c3b931dd904b08c25625440e7287cd"
+    },
+    {
+      "file": "statement.go",
+      "upstream_sha256": "e06e8a591834bd1d3ee350e9df2977e65e9ce4585eda501b48befbbcf3d97dce",
+      "derived_sha256": "e06e8a591834bd1d3ee350e9df2977e65e9ce4585eda501b48befbbcf3d97dce"
+    }
+  ]
+}

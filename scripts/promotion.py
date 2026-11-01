@@ -92,17 +92,37 @@ TEST_TOOLS = {
 }
 ROOT_FILES = {"candidate-manifest.json", "SHA256SUMS", *PUBLIC_ASSETS, *TEST_TOOLS}
 PUBLIC_BASENAMES = {PurePosixPath(name).name for name in PUBLIC_ASSETS}
-REQUIRED_EVIDENCE_TUPLES = {
+HISTORICAL_EVIDENCE_TUPLES = {
     ("linux-amd64", "nas_vm", "campus_wired", "password", "password_core"),
     ("linux-amd64", "nas_vm", "campus_wired", "terminal_qr", "terminal_qr"),
     ("windows-amd64", "bhk_windows", "campus_wired", "password", "password_core"),
     ("windows-amd64", "bhk_windows", "campus_wifi", "password", "password_core"),
 }
+REQUIRED_EVIDENCE_TUPLES = {
+    ("windows-amd64", "bhk_windows", "campus_wired", "password", "password_core"),
+    ("windows-amd64", "bhk_windows", "campus_wifi", "password", "password_core"),
+    ("windows-amd64", "bhk_windows", "campus_wired", "terminal_qr", "terminal_qr"),
+}
+HISTORICAL_LOCK_KEYS = LOCK_KEYS[:]
+HISTORICAL_EVIDENCE_KEYS = EVIDENCE_KEYS[:]
+LOCK_KEYS = LOCK_KEYS + ["installation_summary", "wifi_summary"]
+EVIDENCE_KEYS = EVIDENCE_KEYS[:7] + ["runner_sha256"] + EVIDENCE_KEYS[7:]
+AUXILIARY_ID = re.compile(r"^AUX-([0-9]{8})-([0-9]{3})$")
+AUXILIARY_KEYS = ["schema_version", "plan_id", "revision", "summary_id", "kind",
+    "candidate_id", "candidate_set_sha256", "source_commit", "build_input_sha256",
+    "runner_sha256", "execution_context", "result", "started_at", "finished_at",
+    "checks", "verifier", "bundle_sha256"]
+INSTALL_CHECKS = ["candidate_verified", "fresh_install", "three_entry_versions",
+    "active_junction_execution", "fresh_default_meta", "upgrade_preserves_launcher",
+    "basic_rollback", "private_layout", "real_user_path_unchanged", "candidate_unchanged"]
+WIFI_CHECKS = ["candidate_verified", "selected_wifi_topology", "list_complete",
+    "selected_address_unique", "bound_status_valid", "scan_scope_valid",
+    "scan_complete", "selected_result_valid", "topology_unchanged", "candidate_unchanged"]
 PASSWORD_BEFORE = ["synthetic_covered", "live_unverified"]
 PASSWORD_AFTER = ["synthetic_covered", "live_verified"]
 QR_BEFORE = ["observed_anonymous", "synthetic_covered", "live_unverified"]
 QR_AFTER = ["observed_anonymous", "synthetic_covered", "live_verified"]
-RELEASE_NOTES = """# IPGW-Meta v1.0.0
+HISTORICAL_RELEASE_NOTES = """# IPGW-Meta v1.0.0
 
 - 新安装默认模式：`meta`。
 - 既有安装默认模式：保持 `legacy`；迁移必须由维护者显式执行。
@@ -114,6 +134,14 @@ RELEASE_NOTES = """# IPGW-Meta v1.0.0
 - 自更新：禁用；请从官方 GitHub Release 获取并验证资产。
 - macOS：仅完成原生安装和 CLI smoke，没有校园网认证证据。
 """.encode("utf-8")
+RELEASE_NOTES = HISTORICAL_RELEASE_NOTES.replace(
+    "NAS campus wired、BHK campus wired 与 BHK campus Wi-Fi 三项".encode("utf-8"),
+    "Windows/BHK campus wired 与 campus Wi-Fi 两项".encode("utf-8")
+).replace("NAS campus wired 一项".encode("utf-8"), "Windows/BHK campus wired 一项".encode("utf-8")).replace(
+    "- macOS：".encode("utf-8"),
+    "- Linux：保留合成、race 与原生安装门禁；没有本 Candidate 校园认证证据，保持 live_unverified。\n- macOS：".encode("utf-8")
+)
+
 
 
 class VerificationError(Exception):
@@ -266,9 +294,9 @@ def validate_timestamp(value: object) -> dt.datetime:
     return parsed
 
 
-def validate_lock_shape(lock: object) -> dict:
-    lock = exact_keys(lock, LOCK_KEYS)
-    if lock["schema_version"] != 1 or lock["plan_id"] != PLAN_ID or lock["revision"] != REVISION or lock["version"] != VERSION:
+def validate_lock_shape(lock: object, *, historical: bool = False) -> dict:
+    lock = exact_keys(lock, HISTORICAL_LOCK_KEYS if historical else LOCK_KEYS)
+    if type(lock["schema_version"]) is not int or lock["schema_version"] != (1 if historical else 2) or lock["plan_id"] != PLAN_ID or lock["revision"] != REVISION or lock["version"] != VERSION:
         reject("identity")
     if not is_hex40(lock["source_commit"]) or not is_hex40(lock["source_tree"]):
         reject("source")
@@ -298,11 +326,21 @@ def validate_lock_shape(lock: object) -> dict:
     if subject_map[artifact["name"]] != artifact["digest"].removeprefix("sha256:"):
         reject("subjects")
     evidence_ids = lock["evidence_ids"]
-    if not isinstance(evidence_ids, list) or len(evidence_ids) != 4 or evidence_ids != sorted(evidence_ids) or len(set(evidence_ids)) != 4:
+    count = 4 if historical else 3
+    if not isinstance(evidence_ids, list) or len(evidence_ids) != count or not all(isinstance(x, str) for x in evidence_ids) or evidence_ids != sorted(evidence_ids) or len(set(evidence_ids)) != count:
         reject("evidence")
     for evidence_id in evidence_ids:
         if not isinstance(evidence_id, str) or EVIDENCE_ID.fullmatch(evidence_id) is None or evidence_id.endswith("-000"):
             reject("evidence")
+    if not historical:
+        ids = []
+        for name in ("installation_summary", "wifi_summary"):
+            ref = exact_keys(lock[name], ["summary_id", "sha256"])
+            if not isinstance(ref["summary_id"], str) or AUXILIARY_ID.fullmatch(ref["summary_id"]) is None or ref["summary_id"].endswith("-000") or not is_hex64(ref["sha256"]):
+                reject("auxiliary")
+            ids.append(ref["summary_id"])
+        if len(set(ids)) != 2:
+            reject("auxiliary")
     return lock
 
 
@@ -508,21 +546,24 @@ def validate_source(root: Path, lock: dict, tag_commit: str) -> None:
         reject("build-input")
 
 
-def validate_evidence(directory: Path, lock: dict) -> None:
+def validate_evidence(directory: Path, lock: dict, *, historical: bool = False, helpers: dict | None = None) -> None:
+    required = HISTORICAL_EVIDENCE_TUPLES if historical else REQUIRED_EVIDENCE_TUPLES
     tuples: set[tuple[str, str, str, str, str]] = set()
     for evidence_id in lock["evidence_ids"]:
-        summary = exact_keys(load_canonical(directory / f"{evidence_id}.json"), EVIDENCE_KEYS)
-        if summary["schema_version"] != 1 or summary["plan_id"] != PLAN_ID or summary["revision"] != REVISION or summary["evidence_id"] != evidence_id:
+        summary = exact_keys(load_canonical(directory / f"{evidence_id}.json"), HISTORICAL_EVIDENCE_KEYS if historical else EVIDENCE_KEYS)
+        if type(summary["schema_version"]) is not int or summary["schema_version"] != (1 if historical else 2) or summary["plan_id"] != PLAN_ID or summary["revision"] != REVISION or summary["evidence_id"] != evidence_id:
             reject("evidence")
         if summary["candidate_id"] != lock["candidate_id"] or summary["candidate_set_sha256"] != lock["candidate_set_sha256"] or summary["source_commit"] != lock["source_commit"] or not is_hex64(summary["bundle_sha256"]):
             reject("evidence")
+        if not historical and (not is_hex64(summary["runner_sha256"]) or (helpers is not None and summary["runner_sha256"] != helpers["test-tools/ipgw-live-gate-windows-amd64.exe"]["sha256"])):
+            reject("runner")
         if summary["result"] != "pass":
             reject("evidence")
         value = (
             summary["platform"], summary["testbed"], summary["network_type"],
             summary["auth_method"], summary["suite"],
         )
-        if value not in REQUIRED_EVIDENCE_TUPLES or value in tuples:
+        if value not in required or value in tuples:
             reject("evidence")
         tuples.add(value)
         before, after = (PASSWORD_BEFORE, PASSWORD_AFTER) if summary["suite"] == "password_core" else (QR_BEFORE, QR_AFTER)
@@ -538,8 +579,55 @@ def validate_evidence(directory: Path, lock: dict) -> None:
             raise VerificationError("evidence") from exc
         if evidence_date != started.date() or finished < started:
             reject("evidence")
-    if tuples != REQUIRED_EVIDENCE_TUPLES:
+    if tuples != required:
         reject("evidence")
+
+
+
+def validate_auxiliary(directory: Path, lock: dict, *, helpers: dict | None = None) -> None:
+    for ref_name, kind, expected_checks in (
+        ("installation_summary", "bhk_windows_native_install", INSTALL_CHECKS),
+        ("wifi_summary", "bhk_wifi_network", WIFI_CHECKS),
+    ):
+        ref = lock[ref_name]
+        raw = read_regular(directory / (ref["summary_id"] + ".json"), MAX_JSON_BYTES)
+        if sha256_bytes(raw) != ref["sha256"]:
+            reject("auxiliary")
+        summary = exact_keys(decode_json(raw, canonical=True), AUXILIARY_KEYS)
+        if type(summary["schema_version"]) is not int or summary["schema_version"] != 1 or summary["plan_id"] != PLAN_ID or summary["revision"] != REVISION or summary["summary_id"] != ref["summary_id"] or summary["kind"] != kind:
+            reject("auxiliary")
+        for name in ("candidate_id", "candidate_set_sha256", "source_commit", "build_input_sha256"):
+            if summary[name] != lock[name]:
+                reject("auxiliary")
+        if summary["execution_context"] != "windows_native" or summary["result"] != "pass" or not is_hex64(summary["runner_sha256"]) or not is_hex64(summary["bundle_sha256"]):
+            reject("auxiliary")
+        if helpers is not None and summary["runner_sha256"] != helpers["test-tools/ipgw-live-gate-windows-amd64.exe"]["sha256"]:
+            reject("runner")
+        start, end = validate_timestamp(summary["started_at"]), validate_timestamp(summary["finished_at"])
+        if end < start or summary["summary_id"].split("-")[1] != start.strftime("%Y%m%d"):
+            reject("auxiliary")
+        checks = summary["checks"]
+        if not isinstance(checks, list) or len(checks) != len(expected_checks):
+            reject("auxiliary")
+        for check, name in zip(checks, expected_checks, strict=True):
+            if exact_keys(check, ["name", "result"]) != {"name": name, "result": "pass"}:
+                reject("auxiliary")
+        verifier = summary["verifier"]
+        if kind == "bhk_windows_native_install":
+            exact_keys(verifier, ["source_tree", "snapshot_sha256", "go_version", "test_binary_sha256"])
+            if verifier["source_tree"] != lock["source_tree"] or verifier["go_version"] != "go1.25.0 windows/amd64" or not is_hex64(verifier["snapshot_sha256"]) or not is_hex64(verifier["test_binary_sha256"]):
+                reject("auxiliary")
+        elif verifier is not None:
+            reject("auxiliary")
+
+
+def audit_history(lock_path: Path, notes_path: Path) -> None:
+    lock = validate_lock_shape(load_canonical(lock_path), historical=True)
+    notes = read_regular(notes_path, MAX_JSON_BYTES)
+    if notes != HISTORICAL_RELEASE_NOTES or sha256_bytes(notes) != lock["release_notes_sha256"]:
+        reject("notes")
+    validate_evidence(lock_path.parent, lock, historical=True)
+    print('{"mode":"historical-v1","state":"valid","scope":"local_lock_and_summaries","provenance":"unverified"}')
 
 
 def validate_lock(repository_root: Path, lock_path: Path, notes_path: Path, tag_commit: str) -> dict:
@@ -553,6 +641,7 @@ def validate_lock(repository_root: Path, lock_path: Path, notes_path: Path, tag_
         reject("notes")
     validate_source(repository_root, lock, tag_commit)
     validate_evidence(expected_directory, lock)
+    validate_auxiliary(expected_directory, lock)
     return lock
 
 
@@ -641,6 +730,9 @@ def validate_candidate_root(root: Path, lock: dict, repository_root: Path) -> di
         reject("toolchain")
     release_assets = validate_assets(manifest["release_assets"], PUBLIC_ASSETS)
     test_tools = validate_assets(manifest["test_tools"], TEST_TOOLS)
+    evidence_dir = repository_root / "docs" / "evidence" / "releases" / VERSION
+    validate_evidence(evidence_dir, lock, helpers=test_tools)
+    validate_auxiliary(evidence_dir, lock, helpers=test_tools)
     live_targets = manifest["live_gate_targets"]
     if not isinstance(live_targets, list) or len(live_targets) != 2:
         reject("targets")
@@ -1612,6 +1704,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser = ClosedArgumentParser(prog="promotion.py")
     commands = parser.add_subparsers(dest="command", required=True)
 
+    history = commands.add_parser("history")
+    history.add_argument("--lock", required=True, type=Path)
+    history.add_argument("--notes", required=True, type=Path)
+
     lock = commands.add_parser("lock")
     lock.add_argument("--repository-root", required=True, type=Path)
     lock.add_argument("--lock", required=True, type=Path)
@@ -1652,7 +1748,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 def run(arguments: list[str]) -> int:
     options = build_parser().parse_args(arguments)
-    if options.command == "lock":
+    if options.command == "history":
+        audit_history(options.lock, options.notes)
+    elif options.command == "lock":
         lock = validate_lock(
             options.repository_root,
             options.lock,

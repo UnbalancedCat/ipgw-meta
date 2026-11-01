@@ -23,6 +23,9 @@ func validCandidateManifestBytes() []byte {
 		"\"version\":\"v1.0.0\"," +
 		"\"candidate_id\":\"v1.0.0-0123456789ab-12345.1\"," +
 		"\"source_commit\":\"0123456789abcdef0123456789abcdef01234567\"," +
+		"\"test_tools\":[" +
+		"{\"platform\":\"linux-amd64\",\"name\":\"test-tools/ipgw-live-gate-linux-amd64\",\"size\":12,\"sha256\":\"" + testLinuxTargetSHA + "\"}," +
+		"{\"platform\":\"windows-amd64\",\"name\":\"test-tools/ipgw-live-gate-windows-amd64.exe\",\"size\":13,\"sha256\":\"" + testWindowsTargetSHA + "\"}]," +
 		"\"live_gate_targets\":[" +
 		"{\"platform\":\"linux-amd64\",\"name\":\"ipgw-meta\",\"size\":123456,\"sha256\":\"" + testLinuxTargetSHA + "\"}," +
 		"{\"platform\":\"windows-amd64\",\"name\":\"ipgw-meta.exe\",\"size\":234567,\"sha256\":\"" + testWindowsTargetSHA + "\"}" +

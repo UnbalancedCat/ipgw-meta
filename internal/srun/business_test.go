@@ -90,6 +90,35 @@ func TestParseLogoutRejectsUnknownOrConflictingResponses(t *testing.T) {
 	}
 }
 
+// Only the observed envelope and field types are reproduced here. All dynamic
+// values are synthetic; this is not a captured response or a server fixture.
+func TestParseLogoutSyntheticBrowserEnvelope(t *testing.T) {
+	const body = `{
+    "client_ip": "192.0.2.10",
+    "ecode": 0,
+    "error": "ok",
+    "error_msg": "",
+    "online_ip": "192.0.2.10",
+    "res": "ok",
+    "srun_ver": "synthetic-server"
+}`
+	const call = "jQuery12345_67890(" + body + ")"
+	for _, input := range []string{call, call + ";"} {
+		if success, err := ParseLogoutSuccess([]byte(input)); err != nil || !success {
+			t.Fatalf("synthetic browser envelope = %v, %v", success, err)
+		}
+	}
+	for _, input := range []string{
+		strings.TrimSuffix(call, ")"),
+		call + "extra",
+		strings.Replace(call, `"ecode": 0`, `"ecode": 0, "ecode": 0`, 1),
+		strings.Replace(call, `"ecode": 0`, `"ecode": 0, "success": false`, 1),
+		strings.Replace(call, `"ecode": 0,`, "", 1),
+	} {
+		requireUnrecognizedBusiness(t, ParseLogoutSuccess, input)
+	}
+}
+
 func TestBusinessErrorsDoNotLeakResponseBody(t *testing.T) {
 	const canary = "SRUN-BUSINESS-RESPONSE-CANARY"
 	_, err := ParseActivationSuccess([]byte(`{"message":"` + canary + `"}`))

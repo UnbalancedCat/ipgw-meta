@@ -88,6 +88,35 @@ func TestGenerateAndCheckDeterministicIndex(t *testing.T) {
 	requireViolation(t, violations, "generated stable-ID index is stale")
 }
 
+func TestEvidenceInstanceReferencesAreNotDocumentationDeclarations(t *testing.T) {
+	for _, tc := range []struct {
+		id    string
+		valid bool
+	}{
+		{"EVID-20260904-001", true},
+		{"EVID-20240229-999", true},
+		{"EVID-20260229-001", false},
+		{"EVID-20260904-000", false},
+		{"EVID-UNDECLARED-001", false},
+	} {
+		t.Run(tc.id, func(t *testing.T) {
+			root := seedRepository(t)
+			appendFile(t, root, "agent/handoff.md", "\nEvidence instance: `"+tc.id+"`\n")
+			_, violations, err := Generate(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.valid {
+				if len(violations) != 0 {
+					t.Fatalf("valid evidence instance was treated as a docs ID: %v", violations)
+				}
+			} else {
+				requireViolation(t, violations, "references undeclared docs ID "+tc.id)
+			}
+		})
+	}
+}
+
 func TestValidationFailures(t *testing.T) {
 	tests := []struct {
 		name string
