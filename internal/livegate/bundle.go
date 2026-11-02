@@ -434,12 +434,19 @@ func buildBundleSummary(evidence Evidence) []byte {
 	_, _ = fmt.Fprintf(&summary, "- candidate_id: %s\n", evidence.CandidateID)
 	_, _ = fmt.Fprintf(&summary, "- candidate_set_sha256: %s\n", evidence.CandidateSetSHA256)
 	_, _ = fmt.Fprintf(&summary, "- source_commit: %s\n", evidence.SourceCommit)
-	if evidence.SchemaVersion == SchemaVersion {
+	if evidence.SchemaVersion >= 2 {
 		_, _ = fmt.Fprintf(&summary, "- runner_sha256: %s\n", evidence.RunnerSHA256)
 	}
 	_, _ = fmt.Fprintf(&summary, "- platform: %s\n", evidence.Platform)
 	_, _ = fmt.Fprintf(&summary, "- testbed: %s\n", evidence.Testbed)
 	_, _ = fmt.Fprintf(&summary, "- network_type: %s\n", evidence.NetworkType)
+	if evidence.SchemaVersion == 3 {
+		ssid := "null"
+		if evidence.WiFiSSID != nil {
+			ssid = *evidence.WiFiSSID
+		}
+		_, _ = fmt.Fprintf(&summary, "- wifi_ssid: %s\n", ssid)
+	}
 	_, _ = fmt.Fprintf(&summary, "- auth_method: %s\n", evidence.AuthMethod)
 	_, _ = fmt.Fprintf(&summary, "- suite: %s\n", evidence.Suite)
 	_, _ = fmt.Fprintf(&summary, "- capability_before: %s\n", joinCapabilities(evidence.CapabilityBefore))

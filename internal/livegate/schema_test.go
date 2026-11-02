@@ -414,6 +414,10 @@ func TestValidationMatrix(t *testing.T) {
 			e.Platform = test.platform
 			e.Testbed = test.testbed
 			e.NetworkType = test.network
+			if test.network == NetworkCampusWiFi {
+				ssid := "neu"
+				e.WiFiSSID = &ssid
+			}
 			e.AuthMethod = test.authMethod
 			e.Suite = test.suite
 			if err := e.Validate(); err != nil {
@@ -466,7 +470,7 @@ func TestIdentifiersHashesAndTimestamps(t *testing.T) {
 		name   string
 		mutate func(*Evidence)
 	}{
-		{"schema_version", func(e *Evidence) { e.SchemaVersion = 3 }},
+		{"schema_version", func(e *Evidence) { e.SchemaVersion = 4 }},
 		{"plan_id", func(e *Evidence) { e.PlanID = "ipgw-meta-v1" }},
 		{"revision", func(e *Evidence) { e.Revision = "2026-08-28-R2" }},
 		{"evidence_id_shape", func(e *Evidence) { e.EvidenceID = "EVID-20260829-1" }},

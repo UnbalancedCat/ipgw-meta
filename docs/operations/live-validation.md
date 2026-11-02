@@ -3,6 +3,8 @@ plan_id: IPGW-META-V1
 revision: 2026-08-28-r2
 ---
 
+2026-11-01 当前规则增量：以 [ADR-0026](../architecture/decisions/ADR-0026-bound-scan-dual-wifi.md) 和 [BHK 验收](bhk-acceptance.md) 的双 SSID 规则覆盖下文旧三组矩阵。必需四组：Windows/BHK 有线 password_core、有线 terminal_qr、NEU password_core、NEU-2.4G password_core；另需安装和两个 SSID 各自网络辅助。无线 run/check-network 增加必需 --wifi-ssid neu|neu_24g 并核对 Native Wi-Fi 当前连接，变化停止包括 cleanup。新 evidence v3、aux v2；旧格式仅历史读取，不跨 Candidate 继承。当前仍在离线交付，未取得双 Wi-Fi 通过证据。
+
 # 真实校园网验收规范
 
 2026-10-31 P4：当前 evidence/promotion v2、三组 BHK 必需认证及辅助门禁见 [BHK 正式验收 v2](bhk-acceptance.md)。当前生成与晋升使用 v2；旧四组和旧格式仅在显式历史审计中生效，历史回执不重写。Candidate/release manifest 仍为 v1；格式迁移不提升真实认证能力。

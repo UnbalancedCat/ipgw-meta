@@ -3,6 +3,8 @@ plan_id: IPGW-META-V1
 revision: 2026-08-28-r2
 ---
 
+2026-11-01 当前格式增量：依 [ADR-0026](../architecture/decisions/ADR-0026-bound-scan-dual-wifi.md) 和 [BHK 验收](../operations/bhk-acceptance.md)，新认证记录/公开摘要为 v3，辅助记录/摘要为 v2，新增必需 wifi_ssid；有线/安装为 null，NEU/NEU-2.4G 分别为 neu/neu_24g。认证公开摘要在原 v2 末尾追加字段，辅助在 verifier 后、公开 bundle_sha256 前插入字段。当前晋升只接受四份认证及三份辅助；下面旧 v1/v2 字段说明用于显式历史审计，不再定义当前生成格式。旧记录不得补造 SSID。实现和真实验收状态分别见[进度](../research/wifi-bound-progress-2026-11-01.md)，格式升级不代表能力通过。
+
 # 脱敏证据规范
 
 2026-10-31 P4：当前 evidence/promotion v2、三组 BHK 必需认证及辅助门禁见 [BHK 正式验收 v2](../operations/bhk-acceptance.md)。当前生成与晋升使用 v2；旧四组和旧格式仅在显式历史审计中生效，历史回执不重写。Candidate/release manifest 仍为 v1；格式迁移不提升真实认证能力。

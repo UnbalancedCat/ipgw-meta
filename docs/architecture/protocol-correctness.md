@@ -36,6 +36,14 @@ CAS 注册的 service 可保持 HTTP 字符串以兼容服务端，但客户端�
 
 恶意 host、userinfo、非预期端口、路径穿越、额外敏感参数或不可解析 Location 一律返回 `protocol_changed`。ticket 不得进入日志、Observer、错误、JSON、缓存或 fixture。
 
+## PROTO-QR-CONTINUATION-001：无 ticket 接续
+
+按 [ADR-0028](decisions/ADR-0028-qr-service-continuation.md)，QR 轮询确认后可接受与本轮 service 的 scheme、host、端口、原始路径精确匹配、无 userinfo/fragment、仅含唯一相同 ac_id 的无 ticket 地址。任何 ticket 参数（包括空值/重复）继续按原 ticket 路径校验，不得降格；额外参数、路径变形和错配拒绝。
+
+该地址只作标识，不发送 HTTP 请求。新增分支在 60 秒子上下文内（服从更短父上下文）完成：向既有 HTTPS activation API 仅以本轮 ac_id 发一次 GET、拒绝重定向、共享同轮 Jar；严格解析不超过现有 API 限制的 JSON 对象，必须且只能含 code/message/Redirect/ID，code 为整数 0，其余为字符串，Redirect 非空。message/ID 不形成成功证据、不输出。重复字段、JSONP、未知或矛盾字段、缺失 Redirect 均拒绝，不进行备用接续。
+
+Redirect 必须匹配既有 HTTPS CAS login 的 host/端口/原始路径，无 userinfo/fragment，唯一参数为 service；内嵌 service 必须等于本轮 service 去除 ac_id 后的基址，且无 query/fragment/userinfo。仅在验证后用本地已知端点和本轮 ac_id 重建 CAS URL，同轮 Jar 继续，沿用 ticket 截获、HTTPS activation、业务成功与最终目标身份检查。网关查询一次，不循环；code 0 或无 ticket 不能被解释为登录成功。旧直接 ticket/CAS 确认路径和 180 秒 QR 轮询期限保持；新期限覆盖接续至最终 status，取消/网络/超限沿用既有分类。
+
 ## PROTO-TRANSPORT-001：HTTPS-only
 
 status、activation 和 logout 必须使用 HTTPS；禁止 `InsecureSkipVerify`、自动 HTTP 降级和不安全覆盖开关。HTTP 仅可用于完全匿名、不携带 Cookie/ticket/账号/凭据的 captive portal 或 `ac_id` 发现，并只生成不可信提示。HTTPS 不可用时返回 `network` 或 `protocol_changed`，不得伪装为“离线”或“校外”。

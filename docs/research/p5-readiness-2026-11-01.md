@@ -9,6 +9,8 @@ revision: 2026-08-28-r2
 
 ## PR #29 与首轮 CI 修正
 
+本节及之后的准备段落按执行时点保留；最新 Candidate 与本机验收结论见本文末节。
+
 维护者批准的 344 文件清单已在新分支 `codex/bhk-v1-acceptance` 提交为 `2fc0d1644920a2aefb10a8859e4baebe84cf0501`，并推送、创建 [PR #29](https://github.com/UnbalancedCat/ipgw-meta/pull/29)。原分支及旧包保留；未合并、未启动 Candidate。下方“尚未提交”等段落是此次授权之前的准备快照。
 
 首轮 CI（CI run `41266117777`、Native install run `41266117667`）不能判通过：Linux 普通测试/race、六平台交叉构建、资产打包、Linux 两架构及 macOS 两架构原生安装成功；文档、macOS 普通测试、Windows 普通测试及两架构原生安装失败。失败定位和修正均限于测试/文档：
@@ -68,3 +70,59 @@ GitHub 只读核验：main 仍为 dac245947b9bd11b5489e2fd87ca2823c2d2dac5，签
 新 Candidate 到位后先完成原生安装辅助记录，再分别安排有线 password_core、terminal_qr。Wi-Fi 在切网前备齐包、依赖、命令和本地停止/恢复说明；维护者断开有线后独立运行辅助检查，通过后才运行已明确授权的一次 password_core。恢复有线只恢复管理连接，不证明账号已 offline；回执与身份逐项核验后才形成公开摘要。
 
 正式认证仍 blocked/live_unverified，M3 in_progress。当前没有新 Candidate、五份正式证据或可用于发布的 promotion lock。任何旧开发包、旧 Candidate 和本页合成测试均不能替代它们。
+
+## 正式 Candidate 与本机验收
+
+2026-11-01 后续执行覆盖上述历史检查点：追加 15 文件提交为 `6ab3b7e248d172d90905c35ae8ba790c4a56a67d`，13 项 CI 全部通过。按明确授权纳入固定旧 main，分支 head 为 `c21094ab3e7b2a4064b66ae82cf2fbc2173f92cd`，tree 保持 `3eaa0bd52b82f27f2636d69f0ccec5d49d4a5424`；再次通过 13 项 CI 后经 GitHub squash 合并 PR #29。受保护 main 为 `1a32aabc2aa3125afe638b0dc3d3444bf7a95c7d`，签名 verified/valid、文件树一致，合并后的 CI `41274672274` 与原生安装 `41274672284` 合计 13 项成功。
+
+维护者单独批准后，仅 dispatch 一次正式 Candidate workflow；[run 41275535736](https://github.com/UnbalancedCat/ipgw-meta/actions/runs/41275535736)、attempt 1 全部成功。Candidate `v1.0.0-1a32aabc2aa3-41275535736.1` 包含已合入的 P3/P4 修复。六平台原生安装按既定 full/smoke 矩阵通过：Linux amd64、Darwin arm64、Windows amd64 为 full，其余三组 smoke。非选中分支的条件 skip 不解释为已运行，也不影响所选门禁的通过记录。
+
+| 身份 | 核验值 |
+|---|---|
+| artifact ID / 大小 | `13070928527` / 57845208 bytes |
+| 原始 ZIP SHA-256 | `5444f60a0a076b2aba25bb50ce4ac3c2878c290b977f6e1ffe037f8fafca2663` |
+| candidate manifest / set SHA-256 | `394a417bd3263d6ff4ed9573eb915a174292d379c214868bb94c205d8b96141b` |
+| build-input SHA-256 | `480acf5a00beab8faaab8d31133f309d64b0d65942f6dfba85c1a7b628dec77a` |
+| Windows helper SHA-256 | `c47bed1d8fb7a896e2e780e554eb17be84ce6bc69dce67e38dab6c847d43c0d8` |
+
+本机核验原始 ZIP 与服务端摘要一致，安全解包后 14 文件、57843072 bytes 的闭集、manifest、校验清单及产物投影全部通过。使用校验官方发行摘要与 checksum 后的便携 gh 2.103.3，独立验证 ZIP 和十份公开资产的 attestation；固定仓库、workflow、main ref、source digest、GitHub hosted runner，以及仓库校验器要求的精确 run/attempt/subject 集合全部通过。只使用既有 Git 身份的内存凭据，没有记录 token 或修改系统 PATH。报告在 `build/p5-preparation-20261101/CANDIDATE-VERIFIED.md` 和同目录 `attestation-verification/`。
+
+本地保留上述集成分支，未强制切到 squash main；fetch 后 origin/main 指向 Candidate source。14 文件原件保存在 `build/rc-build-v1.0.0-1a32aabc2aa3-41275535736.1`，另为原生验收建立同字节的独立私有副本，只收紧新副本 ACL。没有修改仓库/旧包 ACL、旧 Candidate 或真实安装。
+
+### BHK 安装辅助执行记录
+
+工具执行账户为 BHKDesktop 的 Unbal；记录真实 Windows 原生工具上下文，不冒充维护者私有终端或 CI。首次调用误用了不符合既有契约的输出目录，exit 2、没有 bundle；纠正为 `build/live-evidence` 后生成当日第 001 份辅助 bundle，结果 blocked。完整 ID 保存在私有回执，不从首次退出推断测试通过。
+
+普通进程独立复现已编译测试程序的启动遭 Windows error 740，需要提升。经标准 UAC 运行同一 Candidate helper 后生成当日第 002 份辅助 bundle，仍 blocked。进一步在提升上下文复现 fresh 子测试：直接运行已安装目标版本成功，通过长测试路径的 active junction 启动失败。前两份辅助记录保留，不能用 CI 结果或目标 EXE 的成功替代 junction 验收；未改变安装安全规则或正式 helper 字节。
+
+后续仅缩短独立测试 work-root，保持同一 Candidate、管理员上下文及完整验收；05:52:48–05:54:36 UTC 的第 003 份辅助记录 pass。十项检查全部 pass：Candidate、fresh install、三入口、active junction、默认 meta、升级保持、基本回滚、私有布局、真实用户 PATH 不变及 Candidate 前后不变。没有 skip，也没有用直接目标启动替代 junction 启动。此结果支持长测试路径是本机拒绝条件之一；不宣称所有 Windows 长路径安装均已支持。
+
+已通过同一 helper 的 summarize 只读验证私有 bundle/checksums，生成 ignored 人工审阅副本 `build/p5-preparation-20261101/installation-summary-review.json`。bundle SHA-256 为 `19569e29a2d5e5ae38866151dd83ebfa4034b5e3be520ba94d4cbdd62c6c424a`；源码快照 SHA-256 为 `cfa42cde3d630f23c6a8666f05a140234ff17272016ec479f8a5f6081a50985b`，本地验证器 SHA-256 为 `dd773ec2c3d6647befa93df13a74f0ac8b521902a2ffc2d5c90b1bafd059e45b`，Go 精确 1.25.0 windows/amd64。验证器来自 Candidate source，属于本地辅助程序，不冒充 CI attested 资产。两份 blocked bundle 和首次无 bundle 的错误调用保留；公开摘要尚未经维护者审阅选入发布材料。
+
+下一步为单独授权的同一 Candidate 有线 password_core，随后有线 terminal QR，再按预先准备的断网交接执行 Wi-Fi 辅助和 password_core。三份认证和 Wi-Fi 辅助证据尚未取得，本轮没有校园请求、profile/凭据读取、tag 或 release。正式认证与 M3 状态保持；本轮仅更新本地执行文档，没有追加提交或推送。
+
+### 有线正式 password_core 回执
+
+上述段落是构建与安装窗口的结束记录。后续维护者明确授权一次有线 password_core 并重新确认现场条件。首次原生终端入口因工具上下文 C 盘 LOCALAPPDATA 可见性差异，在产品哈希检查处停止，没有启动 runner 或认证；改用共享 D 盘新私有运行子集，复核相同产品、manifest 和 helper 字节后，维护者在自己的私有 PowerShell 终端完成本次正式窗口。未沿用开发 observed CLI，不保存终端账号提示或密码。
+
+回执 `EVID-20261101-001`，schema v2，Candidate 为 `v1.0.0-1a32aabc2aa3-41275535736.1`；06:20:37–06:21:40 UTC（香港时间 14:20:37–14:21:40），result=pass、runner exit 0。平台/测试面为 windows-amd64 / bhk_windows / campus_wired，认证方式 password，套件 password_core。
+
+七步均 pass、exit 0、error_code=null：初始 offline、login LoggedIn、独立 status online、重复 login AlreadyOnline、logout LoggedOut、独立最终 status offline、重复 logout AlreadyOffline。持续时间分别为 3/42/3/3/3/3/3 秒；没有 cleanup。此回执支持目标身份及该窗口的状态闭环，不表示所有未来校园请求或其他平台认证已通过。
+
+Agent 使用同一冻结 helper 的 summarize 只读校验 bundle/schema/checksums，并逐项核验完整七步、零 cleanup、Candidate/source/manifest/helper 和实际普通产品哈希。bundle SHA-256 为 `1d64b8f07e8aeb717b94a357ca465f085fcfc5b529173281673211b4d0fc140c`；产品 SHA-256 为 `f1bab64a7074c993f75b447463ba22b9e1af806c90a9ed6a6a3b9a3fb071b85a`。其他 Candidate 身份与上表一致。脱敏审阅副本为 `build/p5-preparation-20261101/wired-password-summary-review.json`，逐项核验回执为同目录 `wired-password-verification.json`；未提交私有 bundle 或原始认证材料，公开摘要尚待维护者审阅选入发布集合。
+
+该 tuple 的 capability_after 为 synthetic_covered + live_verified。有线 QR、Wi-Fi 辅助及 Wi-Fi password_core 尚未执行，Linux/macOS 无本 Candidate 校园证据；M3 保持 in_progress。单次授权已消耗，Agent 未重跑登录/注销或切换拓扑。本轮仅更新执行文档，未提交、推送、创建 tag/release。
+
+### 有线正式 terminal_qr 失败回执
+
+2026-11-01 后续解释修正（原回执及下文当时记录保留）：executeQRPair 会将 QR 成功后的 status 失败合并到 qr_login_logged_in，并累加耗时。所以下文“没有后续状态”不能理解为没有执行 status 请求，只能确认没有独立 status 步骤或通过证明。失败可能来自 QR 本身或后续状态检查；无 cleanup/清理权及最终状态未验证结论不变。具体依据及下一步见[QR 契约核对](qr-browser-contract-2026-11-01.md)。
+
+维护者另行授权一次有线 QR 并重新确认现场条件，使用同一冻结 Candidate 的普通 CLI、配套 helper 和共享 D 盘私有终端入口。窗口为 07:14:41–07:17:30 UTC（香港时间 15:14:41–15:17:30）。回执 `EVID-20261101-002` 为 v2 / windows-amd64 / bhk_windows / campus_wired / terminal_qr，result=fail、runner exit 10。
+
+仅有两个步骤：initial_status_offline pass / exit 0 / 3 秒；qr_login_logged_in fail / exit 6 / protocol_changed / 166 秒。没有后续状态、注销或 cleanup。runner 尚未通过 status_online 建立清理权，因此不能自行注销；既不能把用户扫码确认解释成网关目标身份已上线，也不能假定窗口后仍 offline。维护者只反馈“二维码出现，已扫码并确认”，未收集 QR payload、截图、链接或原始响应。
+
+Agent 使用同一 helper 的 summarize 验证 bundle/schema/checksums，再核对两步前缀、失败码、能力不升级及运行文件哈希。bundle SHA-256 为 `36ab30c31a7edb6088e043bf7085b1e0eb848e4d7b870c5dd9500537ff545f04`，Candidate/source/manifest/普通产品/helper 身份与上一窗口一致。脱敏副本位于 `build/p5-preparation-20261101/wired-qr-summary-review.json` 与 `wired-qr-verification.json`；不作为必需 pass evidence，历史失败保留。
+
+离线源码对照：SDK 在显示二维码后仍可能因轮询封装/状态不识别、确认跳转安全校验或页面解析、activation 响应等返回同一 protocol_changed；正式 human-mode runner 只记录错误分类，无法区分这些分支。166 秒不能单独证明轮询超时；正常二维码过期路径使用交互错误，不能据接近历史 180 秒期限改判为 expired。已提供的本地 login_neu.js 只展示调用 loginQRCode 并消费回调 redirect_url，不能证明实际轮询响应形式；本地未找到对应独立 QR 脚本，未主动获取站点资源。
+
+下一工作应先确定失败阶段与网页 QR 的确认契约，采用脱敏静态材料或另行确定的开发观测范围；不重跑同包、不保存原始响应、不放宽成功/跳转规则。需要新的状态查询或真实诊断时单独明确范围；当前单次授权已经消耗。若后续产品修复改变 Candidate source，须走新 Candidate 和相应证据流程，不能把本轮 password/安装证据移作新包证据。此前有线密码及安装通过结论保留；Wi-Fi 两项仍未执行，正式发布集合及 M3 未完成。

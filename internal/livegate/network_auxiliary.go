@@ -8,6 +8,9 @@ import (
 	"net/netip"
 	"reflect"
 	"time"
+
+	ipgw "github.com/UnbalancedCat/ipgw-meta"
+	"github.com/UnbalancedCat/ipgw-meta/internal/labpath"
 )
 
 // NetworkList and NetworkScan are maintainer-only projections. Raw interface
@@ -28,14 +31,20 @@ func (e *ProcessExecutor) NetworkList(ctx context.Context) ([]netip.Addr, error)
 		return nil, ErrProcessRunnerFault
 	}
 	out := make([]netip.Addr, 0, len(data.Interfaces))
-	seen := map[netip.Addr]bool{}
+	items := make([]ipgw.Interface, 0, len(data.Interfaces))
 	for _, v := range data.Interfaces {
 		ip, err := netip.ParseAddr(v.IP)
-		if err != nil || !usableBindIP(ip) || v.Index < 1 || v.Name == "" || seen[ip] {
+		if err != nil {
 			return nil, ErrProcessRunnerFault
 		}
-		seen[ip] = true
+		items = append(items, ipgw.Interface{Name: v.Name, Index: v.Index, IP: ip})
 		out = append(out, ip)
+	}
+	if e.NetworkIndex <= 0 {
+		return nil, ErrProcessRunnerFault
+	}
+	if _, err := labpath.ValidateLocalSelection(ctx, items, e.BindIP, uint32(e.NetworkIndex)); err != nil {
+		return nil, ErrProcessRunnerFault
 	}
 	return out, nil
 }
@@ -59,7 +68,7 @@ func (e *ProcessExecutor) NetworkScan(ctx context.Context) error {
 		return ErrProcessRunnerFault
 	}
 	v := data.Results[0]
-	if v.Interface.IP != e.BindIP.String() || v.Interface.Name == "" || v.Interface.Index < 1 || v.Error != nil || v.Status == nil {
+	if e.NetworkIndex <= 0 || v.Interface.IP != e.BindIP.String() || v.Interface.Name == "" || v.Interface.Index != e.NetworkIndex || v.Error != nil || v.Status == nil {
 		return ErrProcessRunnerFault
 	}
 	var status struct {
@@ -105,6 +114,9 @@ func (e *ProcessExecutor) auxiliaryJSON(ctx context.Context, action string) (jso
 	}
 	var out boundedAuxBuffer
 	args := append(e.jsonPrefix(), "network", action)
+	if action == "scan" {
+		args = append(args, "--scope", "bound")
+	}
 	run := e.processRunner()
 	exit, err := run(ctx, e.CandidatePath, args, nil, &out, io.Discard)
 	if err != nil || exit != 0 || ctx.Err() != nil || out.overflow {

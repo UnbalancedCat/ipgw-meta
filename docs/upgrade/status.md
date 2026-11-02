@@ -24,7 +24,49 @@ status: approved
 
 <a id="status-20261031-p4"></a>
 
+### 2026-11-02 PR #30 源码已提交，Windows CI 待闭合
+
+Wi-Fi/QR 统一源码已按授权清单提交至 `codex/bhk-wifi-qr-closure`，HEAD `35dd57183d667d1766d0223772a598e0052dbd60`，见 [PR #30](https://github.com/UnbalancedCat/ipgw-meta/pull/30)。首轮 12/13 项 CI 通过，包括六平台原生安装；Windows 全仓测试中的合成拓扑夹具触发查询超时。正在补齐测试模块隔离与精确拒绝分类，不放宽生产门禁；详情与追加提交检查点见[准备记录](../research/unified-candidate-preparation-2026-11-02.md#后续pr-30-与-windows-合成夹具修正)。尚未合并或生成新 Candidate，正式 QR/双 SSID 新版本证据仍未取得，M3 保持 in_progress。
+
+### 2026-11-01 P5 有线 terminal QR 首次正式窗口失败
+
+<a id="status-20261102-qr-continuation"></a>
+
+2026-11-02 统一源码准备：Wi-Fi/QR 开发结果闭合后，已完成拟提交范围审阅、干净源码快照的两端集成/vet/doccheck、Linux race 及发布工具合成质量门禁；提交清单和 PR 草稿见[准备记录](../research/unified-candidate-preparation-2026-11-02.md)。尚未创建新分支、提交/推送或生成新 Candidate；下一检查点为精确清单授权。正式 QR/M3 保持，下方开发 pass 不作为正式证据。
+
+2026-11-02 最新结果：维护者私有终端的新 QR 开发窗口五步完整 pass，退出码 0；独立目标身份 online、注销及最终 offline 均通过，coverage=complete、gate_failure=null，无 cleanup。四项包哈希、225 项源码快照及严格 v2 回执解码复核通过，见[开发闭环结果](../research/qr-continuation-progress-2026-11-02.md#后续窗口qr-开发闭环通过)。这是非发布开发证据；普通产品字节与此前门禁停止窗口相同，旧失败原因仍未知。QR 开发验证已闭合，下一步统一 Wi-Fi/QR 源码审阅及新 Candidate 准备，不重复开发扫码；提交、正式构建与真实验收另行授权。正式 QR 仍待新 Candidate 验收，M3 in_progress；以下内容为较早的调查/交付快照，其“下一步”由本段覆盖。
+
+2026-11-02 首因定位已离线交付：独立 QR 启动器外层 v2、旧回执显式历史读取，保留首个门禁失败类别和位置，未放宽停止规则。两端相关回归、Linux race/fuzz、共享消费者、绑定/自检通过，新包零网络 preflight ready。普通产品字节与旧包相同；新身份及剩余真实验证见[当前交付](../research/qr-continuation-progress-2026-11-02.md#当前交付门禁首因定位-v2)。本轮未登录或注销，旧真实失败原因不能由离线结果回填；下一步为另行授权的新包单次验证，正式 QR/M3 保持。
+
+2026-11-02 门禁排查补记：维护者确认账号仍在线。8 次原样本地查询稳定，真实本地门禁配合假认证命令五步通过；正常收尾取消及失败停止边界的两端重复回归/race/vet 通过。历史具体原因仍未知，不修改注销或放宽门禁；下一提案为独立开发报告保留首个门禁失败类别，见[排查记录](../research/qr-continuation-progress-2026-11-02.md#门禁排查未复现历史原因仍缺证据)。未新增校园请求，正式状态不提升。
+
+2026-11-02 拓扑复核更新：维护者已授权一次私有 QR 窗口，但旧包在真实请求前因断开 Wi-Fi 的残留默认路由拒绝。经批准继续修复，仅对适配器与 IPv4 状态均明确断开且唯一匹配的残留默认项排除计数，保留全量变化监测及活动竞争拒绝。两端相关回归和新包绑定通过，新包本地 preflight ready/exit 0，零校园请求/零 profile 读取；普通产品字节与上一包相同。新身份、测试与终端入口见[当前实施记录](../research/qr-continuation-progress-2026-11-02.md#后续更新残留默认路由修复及当前可测试包)。后续维护者单次窗口中 QR 命令及独立目标身份 online 核对通过；注销阶段门禁停止，整体 blocked/partial、exit 11，最终会话未知。包哈希与 218 项快照核验通过；维护者未主动改动网络，具体失败项尚无证据，不能认定协议失败或完整闭环成功。见[窗口结果](../research/qr-continuation-progress-2026-11-02.md#最新窗口登录通过注销阶段门禁停止)。授权已消耗，正式 QR/M3 不变；下段 blocked 是旧包历史。
+
+2026-11-02 离线修复交付：按 [ADR-0028](../architecture/decisions/ADR-0028-qr-service-continuation.md) 补齐无 ticket service → HTTPS 网关指示 → 同轮 CAS → ticket 截获 → HTTPS activation/目标身份复核，保持既有直接 ticket 与 CAS 确认分支。独立 qr-dev 包使用普通产品，分别记录 QR、后续 status、logout、final status，不改变正式摘要。两端测试/vet、Linux race/有界 fuzz、六平台三入口构建及依赖隔离、快照/绑定/self-test 通过；安装套件本轮不重跑，Windows 五项既有 symlink 测试因权限 skip，Linux 一项错误构建主机测试条件 skip，不计为通过。本机预检 binding=verified、topology_unavailable、exit 11，network_requests/profile_reads 均为 0，真实模式未执行。包身份、全部报告与后续窗口说明见[实施记录](../research/qr-continuation-progress-2026-11-02.md)。正式 QR 仍 blocked/live_unverified，M3 in_progress；旧 Candidate、失败回执和双 Wi-Fi 开发通过保持，下段为修复实施前的历史快照。
+
+2026-11-02 后续：已授权的无痕网页 QR 对照完成，维护者核对目标 online，普通产品 logout 与最终 offline 均 exit 0。已补齐官方 QR 脚本及网关/CAS 接续材料，发现 SDK 不接受本轮网页先返回的无 ticket service 表示；网页随后经门户 API 再访 CAS 才获得 ticket。证据、浏览器本机代理路径限制及旧失败不可唯一回溯见[研究记录](../research/qr-browser-contract-2026-11-01.md)。采集已结束，下一步为离线接续契约和合成复现；尚未修改产品或交付 QR 修复包，正式 QR/M3 不提升。下段为此前离线准备快照。
+
+当前 QR 修复取证已开始：依据 [ADR-0027](../architecture/decisions/ADR-0027-browser-qr-contract.md) 完成固定版本外部 QR 源码/本地调用链核对及浏览器窗口约定。新增合成回归验证历史摘要无法区分 QR 命令失败与其后 status 失败；正式 fail 回执不变。缺官方 QR 构造器/轮询实现及真实脱敏状态关系，产品根因仍未确定，未修改产品或创建修复包。后续仅进入另行授权的无痕 Chrome 对照，详见[研究记录](../research/qr-browser-contract-2026-11-01.md)。
+
+补充手动试用：维护者反馈普通开发产品在有线、NEU、NEU-2.4G 上登录/注销均无问题；浏览器门户 ac_id 依次为 1、15、15。此为维护者观察，无新增逐命令/正式回执，不改变正式认证状态。固定版本外部对照及局限见[研究记录](../research/ac-id-comparison-2026-11-01.md)。
+
+最新后续：[双 SSID 与定向扫描](../architecture/decisions/ADR-0026-bound-scan-dual-wifi.md) 已完成离线实现、版本迁移、两端回归及独立开发包。维护者分别回传同包 NEU、NEU-2.4G 开发窗口 pass：两次均为本地 5 个地址、选中 1 项，八项辅助和 password_core 七步全部通过，窗口结束时 offline；release_evidence=false。NEU-2.4G 明确回传启动器 exit 0，NEU 未回传该数字。此前正式辅助 selected_address_unique blocked、开发预检 topology_unavailable 均保留，见[实施记录](../research/wifi-bound-progress-2026-11-01.md)。两个窗口均关闭 Clash，尚未建立故障因果；浏览器门户跳转只作脱敏观察。双 Wi-Fi 开发验证已闭合，下一发布依赖为 QR 收敛及后续新 Candidate，新正式 Wi-Fi 证据仍未取得。当前目标为四组认证和三份辅助，旧三组/两项描述按日期保留。M3 不变。
+
+后续维护者已明确暂缓 QR 排障，改为同一 Candidate 的 Wi-Fi 验收，并批准断网交接范围：一次 Wi-Fi 辅助检查全部通过后再执行一次 password_core，初始在线/未知或任一步失败均停止，不自动重试或注销已有会话。完整 Candidate 和本地入口已校验，只执行 CheckOnly，尚无 Wi-Fi 结果。此安排覆盖下文“先厘清 QR 再进入 Wi-Fi”的当时顺序，不取消 QR 必需门禁。
+
+同一 Candidate 的正式有线 terminal_qr 回执为 fail：初始 offline 通过，QR 登录步骤 166 秒后返回产品 exit 6 / protocol_changed，runner exit 10。维护者确认二维码出现且已扫码确认；回执没有证明扫码后哪个协议阶段失败。私有 bundle/schema/checksums、产品/manifest/helper 绑定已复核，详见 [QR 失败记录](../research/p5-readiness-2026-11-01.md#有线正式-terminal_qr-失败回执)。
+
+未建立 status_online 清理权，因此没有 cleanup 或最终 status；窗口后的账号状态未确认，不能沿用初始 offline。QR 保持 live_unverified，P5 正式验收集合未闭合，M3 保持 in_progress；此前有线 password_core 和安装辅助的通过记录仍有效，但不能代替 QR。停止重复该包 QR 和继续 Wi-Fi 窗口，先厘清协议证据缺口；不改冻结 Candidate 或猜测放宽响应规则。
+
+### 2026-11-01 P5 有线正式 password_core 通过
+
+当前 Candidate `v1.0.0-1a32aabc2aa3-41275535736.1` 已取得 windows-amd64 / bhk_windows / campus_wired / password_core 的正式 v2 pass 回执。七个主步骤完整通过、无 cleanup；私有 bundle/checksums、Candidate manifest、普通产品与 helper 哈希绑定已只读复核。该 tuple 的能力为 synthetic_covered + live_verified，详情见 [P5 有线回执](../research/p5-readiness-2026-11-01.md#有线正式-password_core-回执)。窗口结束时 offline，不据此推断之后持续状态。
+
+BHK 安装辅助已通过；尚缺有线 terminal_qr、Wi-Fi 辅助和 Wi-Fi password_core。后续真实窗口仍逐次授权；公开摘要待人工审阅选入，尚无完整 promotion lock。M3 保持 in_progress，不提升 Linux/macOS 或其他网络的能力。下方“正式 password_core blocked/live_unverified”等描述保留为此次窗口之前的历史状态。
+
 ### 2026-11-01 P5 源码准备：symlink 覆盖补齐
+
+最新进展：PR #29 已经授权流程合入受保护 main `1a32aabc2aa3125afe638b0dc3d3444bf7a95c7d`，签名有效、13 项 CI 全部通过，tree 与审阅版本一致。一次正式 [Candidate run 41275535736](https://github.com/UnbalancedCat/ipgw-meta/actions/runs/41275535736) 成功，生成 `v1.0.0-1a32aabc2aa3-41275535736.1`；六平台原生安装、14 文件本地闭集核验及 11-subject 独立 attestation 复核通过。BHK 原生安装辅助第 003 份回执十项全 pass，前两份 blocked 保留；执行详情与限制见 [P5 记录](../research/p5-readiness-2026-11-01.md#正式-candidate-与本机验收)。三组正式认证及 Wi-Fi 辅助证据尚未取得，正式 password_core 仍 blocked/live_unverified，M3 仍 in_progress。以下未合并/未构建描述保留为较早检查点。
 
 最新复核：维护者批准的 8 文件修正已提交/推送为 `0d11f1f`；13 项 CI 中 12 项成功，六平台原生安装全部通过。Windows 全仓测试仍有诊断夹具的路径/超时失败，追加测试修正在本机全仓回归、vet 和独立短路径环境通过，尚待提交及新 CI。未合并、没有新 Candidate；以下首次提交及修正前记录保留。
 

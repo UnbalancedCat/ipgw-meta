@@ -35,6 +35,9 @@ generated: true
 | `ADR-0023` | Chrome 注销响应与旧版行为对照 | [docs/architecture/decisions/ADR-0023-browser-logout-comparison.md](architecture/decisions/ADR-0023-browser-logout-comparison.md#adr-0023chrome-注销响应与旧版行为对照) |
 | `ADR-0024` | 注销请求显式指定 JSONP callback | [docs/architecture/decisions/ADR-0024-logout-explicit-callback.md](architecture/decisions/ADR-0024-logout-explicit-callback.md#adr-0024注销请求显式指定-jsonp-callback) |
 | `ADR-0025` | BHK 正式验收 v2 与辅助门禁 | [docs/architecture/decisions/ADR-0025-bhk-formal-acceptance.md](architecture/decisions/ADR-0025-bhk-formal-acceptance.md#adr-0025bhk-正式验收-v2-与辅助门禁) |
+| `ADR-0026` | 定向扫描与双 SSID 验收 | [docs/architecture/decisions/ADR-0026-bound-scan-dual-wifi.md](architecture/decisions/ADR-0026-bound-scan-dual-wifi.md#adr-0026定向扫描与双-ssid-验收) |
+| `ADR-0027` | 网页契约优先的 QR 修复取证 | [docs/architecture/decisions/ADR-0027-browser-qr-contract.md](architecture/decisions/ADR-0027-browser-qr-contract.md#adr-0027网页契约优先的-qr-修复取证) |
+| `ADR-0028` | QR 无 ticket service 的有界接续 | [docs/architecture/decisions/ADR-0028-qr-service-continuation.md](architecture/decisions/ADR-0028-qr-service-continuation.md#adr-0028qr-无-ticket-service-的有界接续) |
 | `ARCH-BOUNDARY-001` | 产品边界 | [docs/architecture/overview.md](architecture/overview.md#arch-boundary-001产品边界) |
 | `ARCH-CONCURRENCY-001` | 生命周期 | [docs/architecture/overview.md](architecture/overview.md#arch-concurrency-001生命周期) |
 | `ARCH-MODE-001` | 模式选择 | [docs/architecture/overview.md](architecture/overview.md#arch-mode-001模式选择) |
@@ -92,6 +95,7 @@ generated: true
 | `PROTO-IO-001` | 网络边界 | [docs/architecture/protocol-correctness.md](architecture/protocol-correctness.md#proto-io-001网络边界) |
 | `PROTO-LOGIN-001` | 登录成功不变量 | [docs/architecture/protocol-correctness.md](architecture/protocol-correctness.md#proto-login-001登录成功不变量) |
 | `PROTO-LOGOUT-001` | 幂等注销 | [docs/architecture/protocol-correctness.md](architecture/protocol-correctness.md#proto-logout-001幂等注销) |
+| `PROTO-QR-CONTINUATION-001` | 无 ticket 接续 | [docs/architecture/protocol-correctness.md](architecture/protocol-correctness.md#proto-qr-continuation-001无-ticket-接续) |
 | `PROTO-REDIRECT-001` | CAS ticket 截获 | [docs/architecture/protocol-correctness.md](architecture/protocol-correctness.md#proto-redirect-001cas-ticket-截获) |
 | `PROTO-RESEARCH-001` | legacy 实现排障入口 | [docs/research/active-implementations.md](research/active-implementations.md#proto-research-001legacy-实现排障入口) |
 | `PROTO-TRANSPORT-001` | HTTPS-only | [docs/architecture/protocol-correctness.md](architecture/protocol-correctness.md#proto-transport-001https-only) |

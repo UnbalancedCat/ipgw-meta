@@ -32,8 +32,8 @@ func TestWireFieldsAreExact(t *testing.T) {
 	if len(evidenceFields) != 18 {
 		t.Fatalf("schema top-level field list = %d, want 18", len(evidenceFields))
 	}
-	if len(object) != len(evidenceFields)+1 {
-		t.Fatalf("top-level fields = %d, want exactly 19", len(object))
+	if len(object) != len(evidenceFields)+2 {
+		t.Fatalf("top-level fields = %d, want exactly 20", len(object))
 	}
 	for _, name := range evidenceFields {
 		if _, ok := object[name]; !ok {
@@ -174,10 +174,10 @@ func TestWireTypesAndIntegerNumericForms(t *testing.T) {
 		old  string
 		new  string
 	}{
-		{"schema_string", "\"schema_version\": 2", "\"schema_version\": \"1\""},
-		{"schema_null", "\"schema_version\": 2", "\"schema_version\": null"},
-		{"schema_decimal", "\"schema_version\": 2", "\"schema_version\": 2.0"},
-		{"schema_exponent", "\"schema_version\": 2", "\"schema_version\": 2e0"},
+		{"schema_string", "\"schema_version\": 3", "\"schema_version\": \"1\""},
+		{"schema_null", "\"schema_version\": 3", "\"schema_version\": null"},
+		{"schema_decimal", "\"schema_version\": 3", "\"schema_version\": 3.0"},
+		{"schema_exponent", "\"schema_version\": 3", "\"schema_version\": 3e0"},
 		{"exit_string", "\"exit_code\": 0", "\"exit_code\": \"0\""},
 		{"exit_null", "\"exit_code\": 0", "\"exit_code\": null"},
 		{"exit_decimal", "\"exit_code\": 0", "\"exit_code\": 0.0"},
@@ -225,7 +225,7 @@ func TestEncodeEvidenceIsCanonicalAndRoundTrips(t *testing.T) {
 	if bytes.Contains(raw, []byte{'\r'}) {
 		t.Fatal("canonical encoding contains CR")
 	}
-	if !bytes.HasPrefix(raw, []byte("{\n  \"schema_version\": 2,")) {
+	if !bytes.HasPrefix(raw, []byte("{\n  \"schema_version\": 3,")) {
 		t.Fatalf("canonical encoding has unexpected prefix: %q", raw[:min(40, len(raw))])
 	}
 

@@ -5,7 +5,11 @@ revision: 2026-08-28-r2
 
 # BHKDesktop 本机开发与合成测试
 
+2026-11-01 Wi-Fi 增量入口：`python scripts/dev.py wifi-dev --context tool` 执行合成测试、vet、自检；Windows 构建独立 wifi-dev-launch 包并审计源码/文件绑定与篡改拒绝，Linux 加 race 和有界 SSID fuzz。`p4` 覆盖 schema/辅助/路径，`quality` 覆盖 promotion 及其他质量门禁，`cross` 检查六平台产品依赖隔离。依据 [ADR-0026](../architecture/decisions/ADR-0026-bound-scan-dual-wifi.md)；包内分别提供 NEU/NEU-2.4G 操作说明。`--preflight` 是零网络、本地只读；`--run-once` 必须另行单次授权和私有终端确认，合成入口不执行它。普通产品开发身份 dev-wifi-local，release_evidence=false，不使用 observed CLI 或冻结 Candidate 字节。
+
 ## 当前优先级（2026-10-29）
+
+2026-11-01 当前 QR 工作：按 [ADR-0027](../architecture/decisions/ADR-0027-browser-qr-contract.md) 先完成网页契约对照，不直接复用 password observed CLI 或增加 QR 诊断体系。旧 runner 合成步骤的解释与针对性合成回归见[研究记录](../research/qr-browser-contract-2026-11-01.md)；真实浏览器和后续修复包验证分别授权。无确定产品缺陷时不生成新包或无条件重跑全仓构建。
 
 唯一后续路线见[认证收敛 roadmap](../upgrade/plan.md#roadmap-20261029)，当前事实见[状态摘要](../upgrade/status.md#status-20261029)。Windows/WSL 开发基线及 P1 行为对照已建立；P2 入口与边界见[产品等价开发验证](development-validation.md)，不重复安装或环境初始化。
 
@@ -16,6 +20,15 @@ D4–D15 证书/CTL 专项退出默认开发主线，以下工具入口、命令
 P2 合成入口为 `python scripts/dev.py auth-dev --context tool`（Windows 或同机 WSL）；Windows 阶段额外创建独立 `ready/` 包并运行启动器 `--self-test` 与篡改拒绝检查。`scripts/build-auth-dev.py --output ABS_NEW_BUILD_DIR` 必须在该入口提供的固定 Go/离线环境中使用；不覆盖旧目录。payload 不是人工执行入口，真实模式只从已核验的 `auth-dev-launch.exe` 发起。
 
 `--preflight` 只读本地拓扑；`--anonymous-once` 和 `--password-core PROFILE` 是未来单次授权入口，均不在 `auth-dev` 合成阶段执行。password 模式只在维护者私有终端输入凭据；不要把该模式输出/交互转录当作无人值守测试。
+
+## 外部实现对照
+
+2026-11-01 维护者要求：后续开发更新将外部实现对照作为常规检查项。优先参考 neucn/ipgw、Neboer/ipgw-py-manager、7aaauTools/neu-login，必要时结合本地 legacy。首次 ac_id 对照及固定提交见[研究记录](../research/ac-id-comparison-2026-11-01.md)。
+
+- 每次开发更新先判断相关性；涉及门户发现、CAS、注销、QR、网络选择或兼容行为时，核对相关仓库当前提交及对应源码/调用链。纯文档措辞或无关实现调整可记录“不涉及协议对照”，不机械重复抓取全部仓库。
+- 记录查询日期、完整提交、文件/函数、与上次的相关差异，以及采纳/不采纳/未知的依据。不可访问时明确缺口或沿用的历史版本，不宣称完成最新复核。
+- 外部代码、README 和 issue 是研究线索，不能替代 docs 契约、本地合成回归或单独授权的真实证据。借鉴行为前先检查安全边界与适用范围；复制代码前另查许可证及来源要求。
+- 默认只读源码，不运行外部登录器，不复制凭据、公钥快照或原始认证材料，不自动下载/更新依赖，也不建立定时任务。本流程不增加真实校园请求授权。
 
 ## P4 离线开发入口（2026-10-31）
 
@@ -105,6 +118,8 @@ Windows 执行原生普通测试；Linux 承担 race、shell/Python gates、acti
 安装器聚焦排障可执行 `python scripts/dev.py install --run TestWindowsOfflineFreshInstallAndUpgrade`（Linux 使用 `python3` 和对应测试名）。只有 `install` 阶段接受测试名过滤；完整基线仍执行 `test`，不得用过滤运行代替全仓验收。
 
 ## CAS 合成观察的含义
+
+2026-11-02 QR 无 ticket 接续独立入口为 `python scripts/dev.py qr-dev --context tool`（WSL 使用 python3）。它执行共享协议/状态机/开发回执聚焦回归和 vet，Linux 增加 race 与解析器有界 fuzz；Windows 构建快照、普通产品与 qr-dev-launch，执行 self-test 和七类绑定/TTY 检查，不执行真实模式。`--preflight` 是独立零网络本地检查，不读取 profile。开发包、全源码检查的安装排除/skip 以及后续单次私有终端说明见[实施记录](../research/qr-continuation-progress-2026-11-02.md)，不复用 password observed CLI 或旧匿名诊断。
 
 当前 P3 静态语法工作包使用 `python scripts/dev.py auth-static-context --context tool`（Linux 使用 python3）。它先运行纯静态解析与原 SDK 假响应回归、上游 AST 差分、资源/脱敏/schema 检查；Linux 增加 race 和有界 fuzz，Windows 增加原生 Job/硬终止验证及独立快照构建、三成员绑定与九类拒绝矩阵。该开发命令不运行真实匿名入口。
 

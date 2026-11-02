@@ -36,13 +36,20 @@ type Auxiliary struct {
 	FinishedAt         Timestamp        `json:"finished_at"`
 	Checks             []AuxiliaryCheck `json:"checks"`
 	Verifier           *InstallVerifier `json:"verifier"`
+	WiFiSSID           *string          `json:"wifi_ssid,omitempty"`
 }
 
 var InstallChecks = []string{"candidate_verified", "fresh_install", "three_entry_versions", "active_junction_execution", "fresh_default_meta", "upgrade_preserves_launcher", "basic_rollback", "private_layout", "real_user_path_unchanged", "candidate_unchanged"}
 var WiFiChecks = []string{"candidate_verified", "selected_wifi_topology", "list_complete", "selected_address_unique", "bound_status_valid", "scan_scope_valid", "scan_complete", "selected_result_valid", "topology_unchanged", "candidate_unchanged"}
 
 func (a Auxiliary) Validate() error {
-	if a.SchemaVersion != 1 || a.PlanID != PlanID || a.Revision != Revision || a.ExecutionContext != "windows_native" || !a.Result.valid() {
+	if (a.SchemaVersion != 1 && a.SchemaVersion != 2) || a.PlanID != PlanID || a.Revision != Revision || a.ExecutionContext != "windows_native" || !a.Result.valid() {
+		return ErrInvalidEvidence
+	}
+	if a.SchemaVersion == 1 && a.WiFiSSID != nil {
+		return ErrInvalidEvidence
+	}
+	if a.SchemaVersion == 2 && !validWiFiIdentity(a.Kind == "bhk_wifi_network", a.WiFiSSID) {
 		return ErrInvalidEvidence
 	}
 	start, err := parseTimestamp(a.StartedAt)
@@ -120,7 +127,7 @@ func DecodeAuxiliary(raw []byte) (Auxiliary, error) {
 
 func auxiliarySummary(a Auxiliary) []byte {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# IPGW-Meta auxiliary summary\n\n- schema_version: 1\n- summary_id: %s\n- kind: %s\n- candidate_id: %s\n- result: %s\n\n", a.SummaryID, a.Kind, a.CandidateID, a.Result)
+	fmt.Fprintf(&b, "# IPGW-Meta auxiliary summary\n\n- schema_version: %d\n- summary_id: %s\n- kind: %s\n- candidate_id: %s\n- result: %s\n\n", a.SchemaVersion, a.SummaryID, a.Kind, a.CandidateID, a.Result)
 	for _, c := range a.Checks {
 		fmt.Fprintf(&b, "- %s | %s\n", c.Name, c.Result)
 	}
@@ -130,7 +137,7 @@ func auxiliarySummary(a Auxiliary) []byte {
 // PublishAuxiliary uses the same private, durable, no-clobber publication
 // primitives as authentication bundles; no raw command output is accepted.
 func PublishAuxiliary(ctx context.Context, output string, a Auxiliary) (string, error) {
-	if ctx == nil || a.SummaryID != "" || validateBundleOutputDir(output) != nil {
+	if ctx == nil || a.SchemaVersion != 2 || a.SummaryID != "" || validateBundleOutputDir(output) != nil {
 		return "", ErrEvidenceDurability
 	}
 	start, err := parseTimestamp(a.StartedAt)

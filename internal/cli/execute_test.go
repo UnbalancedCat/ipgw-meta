@@ -476,7 +476,7 @@ func TestModernHelpShowsOnlyFixedTree(t *testing.T) {
 		"[--version]",
 		"<status|login|logout|network|profile>",
 		"login [--method password|qr] [--switch]",
-		"network <list|scan>",
+		"network list | network scan [--scope all|bound]",
 		"profile <list|show|add|remove|migrate>",
 	} {
 		if !strings.Contains(stdout.String(), expected) {

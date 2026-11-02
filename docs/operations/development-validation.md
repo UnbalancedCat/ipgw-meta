@@ -5,7 +5,30 @@ revision: 2026-08-28-r2
 
 # 产品等价开发认证验证
 
+<a id="qr-continuation-development"></a>
+
+## 2026-11-02 QR 独立开发验证
+
+按 [ADR-0028](../architecture/decisions/ADR-0028-qr-service-continuation.md) 新增 qr-dev-launch 独立身份，不扩展下方 password observed 模式。开发包绑定源码快照、普通产品、工具和构建输入哈希，运行前后核验；预检仅检查本地包/有线拓扑，无 profile/status 读取。self-test 使用合成执行器。真实模式需新的单次授权和私有 TTY 确认。
+
+复用既有 terminal_qr 状态机：初始 offline、QR、独立目标 status、logout、最终 offline；清理权与拓扑变化停止规则不变。普通产品 QR 输出直通私有 TTY，不捕获或写日志。总期限 10 分钟，QR 子命令 300 秒，其他子命令 120 秒，父上下文更短时优先。开发报告 schema v1、tool_kind=qr-dev、release_evidence=false，独立记录合并前命令枚举/退出码/固定错误分类/结果/耗时及完整性；整体通过仍以状态机身份闭环为准。无原始输出、账号、IP、URL、Cookie、ticket 或二维码；不改变正式回执，不声称观察 QR 内部阶段。
+
+缺失/混配/运行中漂移、TTY 或 profile 不满足、拓扑变化、取消、超时和不完整报告均不得 pass。结束后由维护者恢复管理连接；硬中断意味着账号状态未知。真实失败不自动重试或增加诊断；正式 QR/M3 仍须新 Candidate 的正式证据。
+
+外层固定记录 source_digest、product_sha256、tool_sha256（受绑定 worker）、binding、state/reason、live_attempted、preflight、qr；启动器文件摘要另由包外构建记录固定。qr 对象的 commands 为合并前记录，steps 保持状态机解释，两者须交叉校验；QR 命令 pass 只表示该子进程成功，整体 pass 仍要求目标身份闭环。取消或拓扑中断保留已校验的命令事实并使外层 blocked；文件绑定漂移则拒绝可信报告。preflight 只报告本地 ready/blocked 与零请求/零 profile 计数，不代表账号 offline。最终身份、指令及预检结果见[实施记录](../research/qr-continuation-progress-2026-11-02.md)。
+
 本页落实 P2 和 [ADR-0017](../architecture/decisions/ADR-0017-development-auth-validation.md)。这是独立开发工具的契约，产品 SDK/CLI/JSON、认证能力及正式四组 Candidate 门禁不变。实现与验收进度见[当前状态](../upgrade/status.md#status-20261029)。
+
+### QR 门禁首因定位（2026-11-02 已批准）
+
+新开发启动器外层升级为 schema v2，新增必需 `gate_failure`（无已确认失败为 null）；内层 qr 命令报告保持 v1 原义。v1 外层仅作显式历史解码，不允许新字段，不补造首因；v2 严格拒绝缺失/未知/重复字段、截断和矛盾状态。产品 JSON、正式 runner/evidence 及成功判据不变。
+
+首因对象仅含 command、phase、reason、query_reason、changes。command 是 initial_check、profile_show、initial_status、qr_login、status_online、logout、final_status、cleanup_logout、cleanup_status、final_check；phase 是 before/during/after/final。reason 为 binding_failed/query_unavailable/snapshot_changed；query_reason 闭集为 none/unsupported/launch_failed/canceled/deadline/exit_nonzero/stderr/output_limit/structure_rejected/local_rule_rejected/local_query_failed/query_rejected；changes 精确为 address/interface/dns/routes/adapters/ssid 六个布尔槽。只有 snapshot_changed 可以且必须至少一个 true；只有 query_unavailable 可以有非 none query_reason。命令及位置需与可用轨迹相符，preflight 未建立基线时不伪造差异。
+
+保留第一个确认失败，后续检查不能覆盖；命令正常结束所取消的进行中监测查询不记录为失败。保持现有检查调用次数、接受条件、15 秒单查询及 64 KiB 输出限制，不读取新来源、不保存原始拓扑或可关联指纹、不输出错误文本、地址、接口标识。系统命令读取失败与明确本地规则拒绝分别分类，无法细分时 query_rejected。SSID 路径沿用已有读取规则。
+
+仅独立开发工具使用详细投影；共享检查器保留原 bool 接口及正式行为。首次定位失败意味着整体不能 pass，不据此宣称请求是否已发送；phase 只说明检查位置。离线矩阵须覆盖全部原因、变化槽、首因保留、正常取消、绑定漂移、v1/v2 严格兼容和泄漏 canary。完成新绑定包、自检及零网络预检后，真实测试仍需新单次授权。
+
 
 ## REL-DEV-AUTH-001：身份、授权与输出
 

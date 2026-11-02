@@ -58,8 +58,12 @@ func Execute(ctx context.Context, o livegate.Options) int {
 	if install {
 		kind = "bhk_windows_native_install"
 	}
-	a := livegate.Auxiliary{SchemaVersion: 1, PlanID: livegate.PlanID, Revision: livegate.Revision, Kind: kind, CandidateID: identity.CandidateID, CandidateSetSHA256: identity.CandidateSetSHA256, SourceCommit: identity.SourceCommit, BuildInputSHA256: identity.BuildInputSHA256, RunnerSHA256: helper.Binding.RunnerSHA256, ExecutionContext: "windows_native", Result: livegate.ResultBlocked, StartedAt: livegate.Timestamp(started.Format(time.RFC3339))}
+	a := livegate.Auxiliary{SchemaVersion: 2, PlanID: livegate.PlanID, Revision: livegate.Revision, Kind: kind, CandidateID: identity.CandidateID, CandidateSetSHA256: identity.CandidateSetSHA256, SourceCommit: identity.SourceCommit, BuildInputSHA256: identity.BuildInputSHA256, RunnerSHA256: helper.Binding.RunnerSHA256, ExecutionContext: "windows_native", Result: livegate.ResultBlocked, StartedAt: livegate.Timestamp(started.Format(time.RFC3339))}
 	a.Checks = append(a.Checks, livegate.AuxiliaryCheck{Name: "candidate_verified", Result: livegate.ResultPass})
+	if !install {
+		ssid := flags["--wifi-ssid"]
+		a.WiFiSSID = &ssid
+	}
 	var collectionErr error
 	if install {
 		if !protectInstall() {
@@ -73,11 +77,11 @@ func Execute(ctx context.Context, o livegate.Options) int {
 			return 2
 		}
 		snapshot, e := labpath.Capture(ctx, "campus_wifi", ip)
-		if e != nil {
+		if e != nil || string(snapshot.WiFiSSID) != *a.WiFiSSID {
 			fail(&a, "selected_wifi_topology")
 		} else {
 			guard := livegate.GuardPath(snapshot.Check)
-			executor := &livegate.ProcessExecutor{CandidatePath: product.CandidatePath, Profile: flags["--profile"], BindIP: ip, Stderr: o.Stderr, RequireRefuse: true}
+			executor := &livegate.ProcessExecutor{CandidatePath: product.CandidatePath, Profile: flags["--profile"], BindIP: ip, NetworkIndex: int(snapshot.Index), Stderr: o.Stderr, RequireRefuse: true}
 			deps := networkDependencies{guard: guard, prepare: func(c context.Context) error { return executor.PrepareProfile(c, livegate.SuiteTerminalQR) }, status: func(c context.Context, action livegate.CommandAction) livegate.Observation {
 				var observed livegate.Observation
 				if !guard(c, func(child context.Context) { observed = executor.Execute(child, action) }) {
@@ -149,7 +153,7 @@ func parse(args []string) (map[string]string, bool) {
 	if args[0] == "check-install" {
 		required = append(required, "--repository", "--go", "--module-cache", "--work-root")
 	} else {
-		required = append(required, "--candidate", "--profile", "--bind-ip")
+		required = append(required, "--candidate", "--profile", "--bind-ip", "--wifi-ssid")
 	}
 	if len(args) != 1+2*len(required) {
 		return nil, false
@@ -166,11 +170,14 @@ func parse(args []string) (map[string]string, bool) {
 		result[args[i]] = args[i+1]
 	}
 	for k, v := range result {
-		if k != "--profile" && k != "--bind-ip" && (!filepath.IsAbs(v) || filepath.Clean(v) != v) {
+		if k != "--profile" && k != "--bind-ip" && k != "--wifi-ssid" && (!filepath.IsAbs(v) || filepath.Clean(v) != v) {
 			return nil, false
 		}
 	}
 	if args[0] == "check-network" {
+		if result["--wifi-ssid"] != "neu" && result["--wifi-ssid"] != "neu_24g" {
+			return nil, false
+		}
 		ip, e := netip.ParseAddr(result["--bind-ip"])
 		if e != nil || !ip.Is4() || ip.IsLoopback() || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() || !regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`).MatchString(result["--profile"]) {
 			return nil, false
@@ -220,13 +227,13 @@ func collectNetwork(ctx context.Context, ip netip.Addr, d networkDependencies, a
 	if !check("list_complete", func(c context.Context) bool { var e error; ips, e = d.list(c); return e == nil }) {
 		return
 	}
-	if !check("selected_address_unique", func(context.Context) bool { return len(ips) == 1 && ips[0] == ip }) {
+	if !check("selected_address_unique", func(context.Context) bool { return uniqueSelected(ips, ip) }) {
 		return
 	}
 	if !check("bound_status_valid", offline) {
 		return
 	}
-	if !check("scan_scope_valid", func(c context.Context) bool { v, e := d.list(c); return e == nil && len(v) == 1 && v[0] == ip }) {
+	if !check("scan_scope_valid", func(c context.Context) bool { v, e := d.list(c); return e == nil && uniqueSelected(v, ip) }) {
 		return
 	}
 	if !check("scan_complete", func(c context.Context) bool { return d.scan(c) == nil }) {
@@ -237,4 +244,32 @@ func collectNetwork(ctx context.Context, ip netip.Addr, d networkDependencies, a
 		return
 	}
 	check("topology_unchanged", func(context.Context) bool { return true })
+}
+
+func uniqueSelected(ips []netip.Addr, selected netip.Addr) bool {
+	count := 0
+	for _, ip := range ips {
+		if ip == selected {
+			count++
+		}
+	}
+	return count == 1
+}
+
+// DevelopmentNetwork reuses the formal checks but cannot publish a bundle or
+// assert a Candidate identity. The caller binds its independent development EXE.
+func DevelopmentNetwork(ctx context.Context, ip netip.Addr, executor *livegate.ProcessExecutor, check func(context.Context) bool) ([]livegate.AuxiliaryCheck, livegate.Result) {
+	a := livegate.Auxiliary{Result: livegate.ResultBlocked}
+	if ctx == nil || executor == nil || check == nil {
+		return nil, a.Result
+	}
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+	guard := livegate.GuardPath(check)
+	d := networkDependencies{guard: guard, prepare: func(c context.Context) error { return executor.PrepareProfile(c, livegate.SuiteTerminalQR) }, status: executor.Execute, list: executor.NetworkList, scan: executor.NetworkScan}
+	collectNetwork(ctx, ip, d, &a)
+	if ctx.Err() == nil && len(a.Checks) == len(livegate.WiFiChecks)-2 && a.Checks[len(a.Checks)-1].Result == livegate.ResultPass {
+		a.Result = livegate.ResultPass
+	}
+	return a.Checks, a.Result
 }

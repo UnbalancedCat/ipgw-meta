@@ -98,7 +98,7 @@ HISTORICAL_EVIDENCE_TUPLES = {
     ("windows-amd64", "bhk_windows", "campus_wired", "password", "password_core"),
     ("windows-amd64", "bhk_windows", "campus_wifi", "password", "password_core"),
 }
-REQUIRED_EVIDENCE_TUPLES = {
+V2_EVIDENCE_TUPLES = {
     ("windows-amd64", "bhk_windows", "campus_wired", "password", "password_core"),
     ("windows-amd64", "bhk_windows", "campus_wifi", "password", "password_core"),
     ("windows-amd64", "bhk_windows", "campus_wired", "terminal_qr", "terminal_qr"),
@@ -107,11 +107,22 @@ HISTORICAL_LOCK_KEYS = LOCK_KEYS[:]
 HISTORICAL_EVIDENCE_KEYS = EVIDENCE_KEYS[:]
 LOCK_KEYS = LOCK_KEYS + ["installation_summary", "wifi_summary"]
 EVIDENCE_KEYS = EVIDENCE_KEYS[:7] + ["runner_sha256"] + EVIDENCE_KEYS[7:]
+V2_LOCK_KEYS, V2_EVIDENCE_KEYS = LOCK_KEYS[:], EVIDENCE_KEYS[:]
+LOCK_KEYS = HISTORICAL_LOCK_KEYS + ["installation_summary", "wifi_summaries"]
+EVIDENCE_KEYS = EVIDENCE_KEYS + ["wifi_ssid"]
+REQUIRED_EVIDENCE_TUPLES = {
+    ("windows-amd64", "bhk_windows", "campus_wired", "password", "password_core", None),
+    ("windows-amd64", "bhk_windows", "campus_wired", "terminal_qr", "terminal_qr", None),
+    ("windows-amd64", "bhk_windows", "campus_wifi", "password", "password_core", "neu"),
+    ("windows-amd64", "bhk_windows", "campus_wifi", "password", "password_core", "neu_24g"),
+}
 AUXILIARY_ID = re.compile(r"^AUX-([0-9]{8})-([0-9]{3})$")
 AUXILIARY_KEYS = ["schema_version", "plan_id", "revision", "summary_id", "kind",
     "candidate_id", "candidate_set_sha256", "source_commit", "build_input_sha256",
     "runner_sha256", "execution_context", "result", "started_at", "finished_at",
     "checks", "verifier", "bundle_sha256"]
+V1_AUXILIARY_KEYS = AUXILIARY_KEYS[:]
+AUXILIARY_KEYS = AUXILIARY_KEYS[:-1] + ["wifi_ssid", "bundle_sha256"]
 INSTALL_CHECKS = ["candidate_verified", "fresh_install", "three_entry_versions",
     "active_junction_execution", "fresh_default_meta", "upgrade_preserves_launcher",
     "basic_rollback", "private_layout", "real_user_path_unchanged", "candidate_unchanged"]
@@ -134,12 +145,16 @@ HISTORICAL_RELEASE_NOTES = """# IPGW-Meta v1.0.0
 - 自更新：禁用；请从官方 GitHub Release 获取并验证资产。
 - macOS：仅完成原生安装和 CLI smoke，没有校园网认证证据。
 """.encode("utf-8")
-RELEASE_NOTES = HISTORICAL_RELEASE_NOTES.replace(
+V2_RELEASE_NOTES = HISTORICAL_RELEASE_NOTES.replace(
     "NAS campus wired、BHK campus wired 与 BHK campus Wi-Fi 三项".encode("utf-8"),
     "Windows/BHK campus wired 与 campus Wi-Fi 两项".encode("utf-8")
 ).replace("NAS campus wired 一项".encode("utf-8"), "Windows/BHK campus wired 一项".encode("utf-8")).replace(
     "- macOS：".encode("utf-8"),
     "- Linux：保留合成、race 与原生安装门禁；没有本 Candidate 校园认证证据，保持 live_unverified。\n- macOS：".encode("utf-8")
+)
+RELEASE_NOTES = V2_RELEASE_NOTES.replace(
+    "Windows/BHK campus wired 与 campus Wi-Fi 两项".encode("utf-8"),
+    "Windows/BHK campus wired、NEU 与 NEU-2.4G 三项".encode("utf-8"),
 )
 
 
@@ -294,9 +309,10 @@ def validate_timestamp(value: object) -> dt.datetime:
     return parsed
 
 
-def validate_lock_shape(lock: object, *, historical: bool = False) -> dict:
-    lock = exact_keys(lock, HISTORICAL_LOCK_KEYS if historical else LOCK_KEYS)
-    if type(lock["schema_version"]) is not int or lock["schema_version"] != (1 if historical else 2) or lock["plan_id"] != PLAN_ID or lock["revision"] != REVISION or lock["version"] != VERSION:
+def validate_lock_shape(lock: object, *, historical: bool = False, historical_version: int | None = None) -> dict:
+    version = history_version(historical, historical_version)
+    lock = exact_keys(lock, {1: HISTORICAL_LOCK_KEYS, 2: V2_LOCK_KEYS, 3: LOCK_KEYS}[version])
+    if type(lock["schema_version"]) is not int or lock["schema_version"] != version or lock["plan_id"] != PLAN_ID or lock["revision"] != REVISION or lock["version"] != VERSION:
         reject("identity")
     if not is_hex40(lock["source_commit"]) or not is_hex40(lock["source_tree"]):
         reject("source")
@@ -326,22 +342,35 @@ def validate_lock_shape(lock: object, *, historical: bool = False) -> dict:
     if subject_map[artifact["name"]] != artifact["digest"].removeprefix("sha256:"):
         reject("subjects")
     evidence_ids = lock["evidence_ids"]
-    count = 4 if historical else 3
+    count = 3 if version == 2 else 4
     if not isinstance(evidence_ids, list) or len(evidence_ids) != count or not all(isinstance(x, str) for x in evidence_ids) or evidence_ids != sorted(evidence_ids) or len(set(evidence_ids)) != count:
         reject("evidence")
     for evidence_id in evidence_ids:
         if not isinstance(evidence_id, str) or EVIDENCE_ID.fullmatch(evidence_id) is None or evidence_id.endswith("-000"):
             reject("evidence")
-    if not historical:
+    if version >= 2:
         ids = []
-        for name in ("installation_summary", "wifi_summary"):
-            ref = exact_keys(lock[name], ["summary_id", "sha256"])
+        refs = [lock["installation_summary"]]
+        if version == 2:
+            refs.append(lock["wifi_summary"])
+        else:
+            refs.extend(exact_keys(lock["wifi_summaries"], ["neu", "neu_24g"]).values())
+        for value in refs:
+            ref = exact_keys(value, ["summary_id", "sha256"])
             if not isinstance(ref["summary_id"], str) or AUXILIARY_ID.fullmatch(ref["summary_id"]) is None or ref["summary_id"].endswith("-000") or not is_hex64(ref["sha256"]):
                 reject("auxiliary")
             ids.append(ref["summary_id"])
-        if len(set(ids)) != 2:
+        if len(set(ids)) != len(refs):
             reject("auxiliary")
     return lock
+
+
+def history_version(historical: bool, version: int | None) -> int:
+    if version is not None:
+        if type(version) is not int or version not in (1, 2) or historical:
+            reject("history-version")
+        return version
+    return 1 if historical else 3
 
 
 def git_env() -> dict[str, str]:
@@ -546,16 +575,17 @@ def validate_source(root: Path, lock: dict, tag_commit: str) -> None:
         reject("build-input")
 
 
-def validate_evidence(directory: Path, lock: dict, *, historical: bool = False, helpers: dict | None = None) -> None:
-    required = HISTORICAL_EVIDENCE_TUPLES if historical else REQUIRED_EVIDENCE_TUPLES
+def validate_evidence(directory: Path, lock: dict, *, historical: bool = False, historical_version: int | None = None, helpers: dict | None = None) -> None:
+    version = history_version(historical, historical_version)
+    required = {1: HISTORICAL_EVIDENCE_TUPLES, 2: V2_EVIDENCE_TUPLES, 3: REQUIRED_EVIDENCE_TUPLES}[version]
     tuples: set[tuple[str, str, str, str, str]] = set()
     for evidence_id in lock["evidence_ids"]:
-        summary = exact_keys(load_canonical(directory / f"{evidence_id}.json"), HISTORICAL_EVIDENCE_KEYS if historical else EVIDENCE_KEYS)
-        if type(summary["schema_version"]) is not int or summary["schema_version"] != (1 if historical else 2) or summary["plan_id"] != PLAN_ID or summary["revision"] != REVISION or summary["evidence_id"] != evidence_id:
+        summary = exact_keys(load_canonical(directory / f"{evidence_id}.json"), {1: HISTORICAL_EVIDENCE_KEYS, 2: V2_EVIDENCE_KEYS, 3: EVIDENCE_KEYS}[version])
+        if type(summary["schema_version"]) is not int or summary["schema_version"] != version or summary["plan_id"] != PLAN_ID or summary["revision"] != REVISION or summary["evidence_id"] != evidence_id:
             reject("evidence")
         if summary["candidate_id"] != lock["candidate_id"] or summary["candidate_set_sha256"] != lock["candidate_set_sha256"] or summary["source_commit"] != lock["source_commit"] or not is_hex64(summary["bundle_sha256"]):
             reject("evidence")
-        if not historical and (not is_hex64(summary["runner_sha256"]) or (helpers is not None and summary["runner_sha256"] != helpers["test-tools/ipgw-live-gate-windows-amd64.exe"]["sha256"])):
+        if version >= 2 and (not is_hex64(summary["runner_sha256"]) or (helpers is not None and summary["runner_sha256"] != helpers["test-tools/ipgw-live-gate-windows-amd64.exe"]["sha256"])):
             reject("runner")
         if summary["result"] != "pass":
             reject("evidence")
@@ -563,6 +593,10 @@ def validate_evidence(directory: Path, lock: dict, *, historical: bool = False, 
             summary["platform"], summary["testbed"], summary["network_type"],
             summary["auth_method"], summary["suite"],
         )
+        if version == 3:
+            if summary["wifi_ssid"] is not None and summary["wifi_ssid"] not in ("neu", "neu_24g"):
+                reject("ssid")
+            value += (summary["wifi_ssid"],)
         if value not in required or value in tuples:
             reject("evidence")
         tuples.add(value)
@@ -584,18 +618,24 @@ def validate_evidence(directory: Path, lock: dict, *, historical: bool = False, 
 
 
 
-def validate_auxiliary(directory: Path, lock: dict, *, helpers: dict | None = None) -> None:
-    for ref_name, kind, expected_checks in (
-        ("installation_summary", "bhk_windows_native_install", INSTALL_CHECKS),
-        ("wifi_summary", "bhk_wifi_network", WIFI_CHECKS),
-    ):
-        ref = lock[ref_name]
+def validate_auxiliary(directory: Path, lock: dict, *, helpers: dict | None = None, historical_version: int | None = None) -> None:
+    if historical_version not in (None, 2):
+        reject("history-version")
+    old = historical_version == 2
+    refs = [(lock["installation_summary"], "bhk_windows_native_install", INSTALL_CHECKS, None)]
+    if old:
+        refs.append((lock["wifi_summary"], "bhk_wifi_network", WIFI_CHECKS, None))
+    else:
+        refs.extend((lock["wifi_summaries"][ssid], "bhk_wifi_network", WIFI_CHECKS, ssid) for ssid in ("neu", "neu_24g"))
+    for ref, kind, expected_checks, ssid in refs:
         raw = read_regular(directory / (ref["summary_id"] + ".json"), MAX_JSON_BYTES)
         if sha256_bytes(raw) != ref["sha256"]:
             reject("auxiliary")
-        summary = exact_keys(decode_json(raw, canonical=True), AUXILIARY_KEYS)
-        if type(summary["schema_version"]) is not int or summary["schema_version"] != 1 or summary["plan_id"] != PLAN_ID or summary["revision"] != REVISION or summary["summary_id"] != ref["summary_id"] or summary["kind"] != kind:
+        summary = exact_keys(decode_json(raw, canonical=True), V1_AUXILIARY_KEYS if old else AUXILIARY_KEYS)
+        if type(summary["schema_version"]) is not int or summary["schema_version"] != (1 if old else 2) or summary["plan_id"] != PLAN_ID or summary["revision"] != REVISION or summary["summary_id"] != ref["summary_id"] or summary["kind"] != kind:
             reject("auxiliary")
+        if not old and summary["wifi_ssid"] != ssid:
+            reject("ssid")
         for name in ("candidate_id", "candidate_set_sha256", "source_commit", "build_input_sha256"):
             if summary[name] != lock[name]:
                 reject("auxiliary")
@@ -621,13 +661,15 @@ def validate_auxiliary(directory: Path, lock: dict, *, helpers: dict | None = No
             reject("auxiliary")
 
 
-def audit_history(lock_path: Path, notes_path: Path) -> None:
-    lock = validate_lock_shape(load_canonical(lock_path), historical=True)
+def audit_history(lock_path: Path, notes_path: Path, version: int = 1) -> None:
+    lock = validate_lock_shape(load_canonical(lock_path), historical_version=version)
     notes = read_regular(notes_path, MAX_JSON_BYTES)
-    if notes != HISTORICAL_RELEASE_NOTES or sha256_bytes(notes) != lock["release_notes_sha256"]:
+    if notes != (HISTORICAL_RELEASE_NOTES if version == 1 else V2_RELEASE_NOTES) or sha256_bytes(notes) != lock["release_notes_sha256"]:
         reject("notes")
-    validate_evidence(lock_path.parent, lock, historical=True)
-    print('{"mode":"historical-v1","state":"valid","scope":"local_lock_and_summaries","provenance":"unverified"}')
+    validate_evidence(lock_path.parent, lock, historical_version=version)
+    if version == 2:
+        validate_auxiliary(lock_path.parent, lock, historical_version=version)
+    print(json.dumps({"mode": f"historical-v{version}", "state": "valid", "scope": "local_lock_and_summaries", "provenance": "unverified"}, separators=(",", ":")))
 
 
 def validate_lock(repository_root: Path, lock_path: Path, notes_path: Path, tag_commit: str) -> dict:
@@ -1707,6 +1749,7 @@ def build_parser() -> argparse.ArgumentParser:
     history = commands.add_parser("history")
     history.add_argument("--lock", required=True, type=Path)
     history.add_argument("--notes", required=True, type=Path)
+    history.add_argument("--version", type=int, choices=(1, 2), default=1)
 
     lock = commands.add_parser("lock")
     lock.add_argument("--repository-root", required=True, type=Path)
@@ -1749,7 +1792,7 @@ def build_parser() -> argparse.ArgumentParser:
 def run(arguments: list[str]) -> int:
     options = build_parser().parse_args(arguments)
     if options.command == "history":
-        audit_history(options.lock, options.notes)
+        audit_history(options.lock, options.notes, options.version)
     elif options.command == "lock":
         lock = validate_lock(
             options.repository_root,
