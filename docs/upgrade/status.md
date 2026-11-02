@@ -24,6 +24,10 @@ status: approved
 
 <a id="status-20261031-p4"></a>
 
+### 2026-11-02 PR #30 源码已提交，Windows CI 待闭合
+
+Wi-Fi/QR 统一源码已按授权清单提交至 `codex/bhk-wifi-qr-closure`，HEAD `35dd57183d667d1766d0223772a598e0052dbd60`，见 [PR #30](https://github.com/UnbalancedCat/ipgw-meta/pull/30)。首轮 12/13 项 CI 通过，包括六平台原生安装；Windows 全仓测试中的合成拓扑夹具触发查询超时。正在补齐测试模块隔离与精确拒绝分类，不放宽生产门禁；详情与追加提交检查点见[准备记录](../research/unified-candidate-preparation-2026-11-02.md#后续pr-30-与-windows-合成夹具修正)。尚未合并或生成新 Candidate，正式 QR/双 SSID 新版本证据仍未取得，M3 保持 in_progress。
+
 ### 2026-11-01 P5 有线 terminal QR 首次正式窗口失败
 
 <a id="status-20261102-qr-continuation"></a>

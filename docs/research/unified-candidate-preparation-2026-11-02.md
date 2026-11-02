@@ -8,6 +8,18 @@ status: approved
 
 本页记录 `WP-AUTH-CANDIDATE-ACCEPTANCE` 的源码审阅准备，不生成 Candidate 或正式证据。当前路线以[roadmap](../upgrade/plan.md#roadmap-20261029)为准；[双 Wi-Fi 开发结果](wifi-bound-progress-2026-11-01.md)和[QR 五步闭环](qr-continuation-progress-2026-11-02.md#后续窗口qr-开发闭环通过)已明确，单次授权均已消耗。
 
+## 后续：PR #30 与 Windows 合成夹具修正
+
+原 99 文件清单经维护者授权后，已从固定 main 创建 `codex/bhk-wifi-qr-closure`，提交 `35dd57183d667d1766d0223772a598e0052dbd60` 并推送为 [PR #30](https://github.com/UnbalancedCat/ipgw-meta/pull/30)。该提交父节点为 `1a32aabc2aa3125afe638b0dc3d3444bf7a95c7d`，PR 精确包含一个提交、99 文件；四个未跟踪 Python 缓存保留且未提交。下文未提交描述保留为该授权之前的检查点。
+
+首轮 [CI](https://github.com/UnbalancedCat/ipgw-meta/actions/runs/41440505354) 与 [原生安装](https://github.com/UnbalancedCat/ipgw-meta/actions/runs/41440505329) 合计 12/13 项通过：六平台原生安装、打包、Linux/macOS 测试、race、交叉构建及文档/vet/脱敏均通过；Windows 全仓测试失败于 `internal/labpath` 的合成 PowerShell 测试。两个固定分类及三个接受场景受到 15 秒查询期限影响，不能将超时当成对应规则的验证通过。
+
+新 `syntheticTopology` 夹具遗漏了既有 `authdev`、`casacquire` 测试采用的模块隔离：关闭测试进程内自动模块发现，仅从固定 `$PSHOME` 路径导入系统 Utility 模块。所有网络 cmdlet 继续由合成函数覆盖。补充修改只影响测试；生产拓扑查询、15 秒期限、停止规则和产品字节均不变。同时将拒绝矩阵从“任意错误即通过”收紧为精确 `local_rule_rejected` 或 `local_query_failed`，避免超时掩盖未执行的规则。
+
+CI 日志证明发生了超时，但没有直接测量镜像模块发现耗时；该因素与既有夹具处理的差异构成修复依据，远端是否消除失败仍须追加提交后的 CI 验证。不能将此次测试夹具问题解释为此前真实 QR 门禁瞬时失败的已证明原因。追加差异及验证材料保存在 `build/p5-unified-preparation-20261102/ci-followup/`；追加提交/推送需新的精确清单授权，合并、Candidate 和校园操作未获本次授权。
+
+追加修正的本地验收：Windows `windows-20261102T121806Z/result.json` 中 labpath 全包合成测试、vet、doccheck 通过，43 个测试/子测试 pass 事件，无 skip；Linux `linux-20261102T121810Z/result.json` 中同包普通/race/vet/doccheck 通过，普通测试 13 个 pass 事件、无 skip。Linux 不执行 Windows 专属脚本测试。此次仅测试夹具及三份状态文档有差异，产品及生产工具源码未改，不重复已通过的原生安装或六平台构建。新的远端 Windows CI 仍未执行，不能以本地通过替代。
+
 ## 基线与拟提交范围
 
 2026-11-02 本地仍为 `codex/bhk-v1-acceptance`，HEAD `c21094ab3e7b2a4064b66ae82cf2fbc2173f92cd`，暂存区为空。GitHub 只读查询 main 得到 `1a32aabc2aa3125afe638b0dc3d3444bf7a95c7d`，与本地 origin/main 一致；两者提交身份不同，但 HEAD 与该 main 的文件树完全相同。此次没有重新核验远端保护、required checks、tag 或 attestation；相关检查仍须在合并/正式构建检查点进行。

@@ -10,6 +10,11 @@ import (
 // These functions replace every queried cmdlet before the actual production
 // script runs. No host adapters, routes, DNS, or campus requests are queried.
 const syntheticTopology = `
+# Load the sole inbox module required by this fixture through its fixed path.
+# Every network cmdlet is replaced below; image-wide module discovery must not
+# turn a synthetic policy rejection into a query timeout.
+$PSModuleAutoLoadingPreference='None'
+Import-Module ($PSHOME+'\Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop
 $selectedType=6; $otherType=71
 $script:fixtureAdapters=@(
  [pscustomobject]@{ifIndex=7;Status='Up';HardwareInterface=$true;InterfaceType=6;InterfaceGuid='synthetic-selected'},
@@ -57,9 +62,15 @@ func TestTopologyScriptDisconnectedDefaultMatrix(t *testing.T) {
 		{"interface_overflow", "$fixtureInterfaces=@(1..257 | ForEach-Object {$fixtureInterfaces[0]})", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := queryTopology(context.Background(), syntheticTopology+tc.change+"\n"+topologyScript)
-			if (err == nil) != tc.pass {
-				t.Fatal("incorrect topology classification")
+			_, reason := queryTopologyDetailed(context.Background(), syntheticTopology+tc.change+"\n"+topologyScript)
+			want := "local_rule_rejected"
+			if tc.pass {
+				want = "none"
+			} else if tc.name == "query_error" {
+				want = "local_query_failed"
+			}
+			if reason != want {
+				t.Fatalf("got %s want %s", reason, want)
 			}
 		})
 	}

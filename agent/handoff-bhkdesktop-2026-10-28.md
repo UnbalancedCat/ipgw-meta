@@ -1123,3 +1123,7 @@ NEU-2.4G 后续已获单次授权并由维护者完成：同包八项辅助与�
 2026-11-02 统一 Candidate 准备启动：维护者要求开始下一步；仅核验 Wi-Fi/QR 未提交源码、现有覆盖和发布依赖，准备审阅清单及提交检查点。沿用当前 roadmap，不修改历史交接，不提交/推送/合并，不构建正式 Candidate 或执行校园请求。
 
 2026-11-02 统一源码审阅收尾：两端干净快照集成/vet/doccheck、Linux race、发布工具合成门禁和脱敏检查已通过；既有产品跨平台与 config 管理员覆盖的源码一致性已核对，不重复无关安装。当前精确清单、差异、PR 草稿及下一授权边界见[准备记录](../docs/research/unified-candidate-preparation-2026-11-02.md)。拟从与当前 HEAD 同树的固定 main 创建新分支，保留全部未提交改动及排除缓存；尚未创建分支、暂存、提交、推送或构建正式 Candidate，没有校园请求。
+
+2026-11-02 已授权 Git 检查点执行：原 99 文件清单已创建新分支、提交和推送，PR #30 首轮 CI 为 12/13，通过及 Windows 合成夹具失败详情见[准备记录](../docs/research/unified-candidate-preparation-2026-11-02.md#后续pr-30-与-windows-合成夹具修正)。当前仅补齐离线测试隔离与拒绝分类，生产路径和预算保持；追加提交需新清单授权，不合并、不创建 Candidate 或执行校园操作。四个缓存文件与旧包/回执保留。
+
+2026-11-02 CI 追加修正离线收尾：Windows labpath 合成全包/vet/doccheck、Linux 同包/race/vet/doccheck 已通过，无测试级 skip；结果与剩余远端验证边界见[准备记录](../docs/research/unified-candidate-preparation-2026-11-02.md#后续pr-30-与-windows-合成夹具修正)。当前四文件补充清单包含一份 Windows 测试和三份执行文档，尚未提交/推送；待精确清单授权后更新 PR #30 并复核 CI，不重跑校园窗口。
