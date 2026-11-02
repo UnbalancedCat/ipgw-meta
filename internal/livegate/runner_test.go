@@ -660,6 +660,58 @@ func TestStateMachineQRStatusRunnerFaultDoesNotSynthesizePass(t *testing.T) {
 	}
 }
 
+// A historical QR proof step cannot identify which of its two commands failed.
+// Both paths below reproduce the same public prefix without doing any I/O.
+func TestStateMachineQRProtocolFailureSummaryIsNotCommandTrace(t *testing.T) {
+	var first []Step
+	for _, afterQR := range []bool{false, true} {
+		name := "qr_command_failed"
+		if afterQR {
+			name = "status_after_qr_failed"
+		}
+		t.Run(name, func(t *testing.T) {
+			clock := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+			advance := func(seconds int) func(context.Context) {
+				return func(context.Context) { clock = clock.Add(time.Duration(seconds) * time.Second) }
+			}
+			failure := commandFailure(CommandExitProtocolChanged, ErrorProtocolChanged)
+			script := []scriptedCall{
+				{action: ActionInitialStatus, observation: Observation{Session: SessionOffline}, before: advance(3)},
+			}
+			if afterQR {
+				script = append(script,
+					scriptedCall{action: ActionQRLogin, observation: Observation{}, before: advance(160)},
+					scriptedCall{action: ActionStatusOnline, observation: failure, before: advance(6)},
+				)
+			} else {
+				script = append(script, scriptedCall{action: ActionQRLogin, observation: failure, before: advance(166)})
+			}
+			executor := &scriptedExecutor{t: t, script: script}
+			steps, result, canceled, err := (StateMachine{
+				Executor: executor, Now: func() time.Time { return clock },
+			}).Run(context.Background(), SuiteTerminalQR)
+			if err != nil || canceled || result != ResultFail {
+				t.Fatalf("result=%q canceled=%v err=%v", result, canceled, err)
+			}
+			executor.requireConsumed() // No extra status or cleanup is permitted.
+			if len(steps) != 2 || steps[1].Name != StepQRLoginLoggedIn ||
+				steps[1].ExitCode != CommandExitProtocolChanged ||
+				steps[1].ErrorCode == nil || *steps[1].ErrorCode != ErrorProtocolChanged ||
+				steps[1].DurationSeconds != 166 {
+				t.Fatalf("unexpected proof prefix: %#v", steps)
+			}
+			if err := validateStepSequence(SuiteTerminalQR, result, steps); err != nil {
+				t.Fatalf("invalid historical proof shape: %v", err)
+			}
+			if !afterQR {
+				first = steps
+			} else if !reflect.DeepEqual(first, steps) {
+				t.Fatalf("different command failures should have identical proof prefixes: %#v / %#v", first, steps)
+			}
+		})
+	}
+}
+
 func TestStateMachineRunnerFaultCleanupOwnership(t *testing.T) {
 	t.Run("before ownership", func(t *testing.T) {
 		executor := &scriptedExecutor{t: t, script: []scriptedCall{{

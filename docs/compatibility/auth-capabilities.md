@@ -5,6 +5,8 @@ revision: 2026-08-28-r2
 
 # 认证能力矩阵
 
+2026-11-01 发布目标更新：[ADR-0026](../architecture/decisions/ADR-0026-bound-scan-dual-wifi.md) 要求有线 password、QR 及 NEU/NEU-2.4G 各自 password，Wi-Fi 能力按 SSID 分别记录。旧 Candidate 的有线 password pass 不迁移到新开发包；两个 SSID 开发/正式结果目前均未取得，QR 仍未闭合，NEU-Mobile 暂缓。格式及晋升入口见 [BHK 验收](../operations/bhk-acceptance.md)，旧矩阵保留作历史版本解释，不能提升 Linux/macOS 能力。
+
 2026-10-31 P4：当前 evidence/promotion v2、三组 BHK 必需认证及辅助门禁见 [BHK 正式验收 v2](../operations/bhk-acceptance.md)。当前生成与晋升使用 v2；旧四组和旧格式仅在显式历史审计中生效，历史回执不重写。Candidate/release manifest 仍为 v1；格式迁移不提升真实认证能力。
 
 ## AUTH-STATUS-001：能力状态词汇

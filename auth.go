@@ -356,6 +356,9 @@ func (c *Client) finishQRConfirmation(ctx context.Context, client *http.Client, 
 		return LoginResult{}, newError(CodeProtocolChanged, "QR confirmation returned an invalid redirect", false, nil)
 	}
 	if sameServiceTarget(target, serviceURL) {
+		if !strings.Contains(rawRedirect, "#") && noTicketQRService(target, serviceURL) {
+			return c.continueQRService(ctx, client, request, serviceURL, acID)
+		}
 		capture, err := c.ticketFromRedirect(rawRedirect, serviceURL)
 		if err != nil {
 			return LoginResult{}, err

@@ -40,6 +40,7 @@ type publicEvidence struct {
 	StartedAt          Timestamp          `json:"started_at"`
 	FinishedAt         Timestamp          `json:"finished_at"`
 	BundleSHA256       string             `json:"bundle_sha256"`
+	WiFiSSID           *string            `json:"wifi_ssid"`
 }
 
 // PublicSummary only reads verified local bundles; callers review this closed
@@ -64,18 +65,21 @@ func PublicSummary(path string) ([]byte, error) {
 		return nil, ErrInvalidEvidence
 	}
 	if a, err := DecodeAuxiliary(files[0]); err == nil {
+		if a.SchemaVersion != 2 {
+			return nil, ErrInvalidEvidence
+		}
 		if filepath.Base(path) != a.SummaryID || filepath.Base(filepath.Dir(path)) != a.CandidateID {
 			return nil, ErrInvalidEvidence
 		}
 		if !bytes.Equal(files[1], auxiliarySummary(a)) {
 			return nil, ErrInvalidEvidence
 		}
-		out := struct {
-			Auxiliary
-			BundleSHA256 string `json:"bundle_sha256"`
-		}{a, bundleDigest(files)}
-		raw, e := json.Marshal(out)
-		return append(raw, '\n'), e
+		raw, e := json.Marshal(a)
+		if e != nil {
+			return nil, e
+		}
+		raw = append(raw[:len(raw)-1], []byte(fmt.Sprintf(",\"bundle_sha256\":%q}\n", bundleDigest(files)))...)
+		return raw, nil
 	}
 	e, err := DecodeEvidence(bytes.NewReader(files[0]))
 	if err != nil || e.SchemaVersion != SchemaVersion || !bytes.Equal(files[1], buildBundleSummary(e)) {
@@ -84,7 +88,7 @@ func PublicSummary(path string) ([]byte, error) {
 	if filepath.Base(path) != e.EvidenceID || filepath.Base(filepath.Dir(path)) != e.CandidateID {
 		return nil, ErrInvalidEvidence
 	}
-	out := publicEvidence{e.SchemaVersion, e.PlanID, e.Revision, e.EvidenceID, e.CandidateID, e.CandidateSetSHA256, e.SourceCommit, e.RunnerSHA256, e.Platform, e.Testbed, e.NetworkType, e.AuthMethod, e.Suite, e.Result, e.CapabilityBefore, e.CapabilityAfter, e.StartedAt, e.FinishedAt, bundleDigest(files)}
+	out := publicEvidence{e.SchemaVersion, e.PlanID, e.Revision, e.EvidenceID, e.CandidateID, e.CandidateSetSHA256, e.SourceCommit, e.RunnerSHA256, e.Platform, e.Testbed, e.NetworkType, e.AuthMethod, e.Suite, e.Result, e.CapabilityBefore, e.CapabilityAfter, e.StartedAt, e.FinishedAt, bundleDigest(files), e.WiFiSSID}
 	raw, err := json.Marshal(out)
 	return append(raw, '\n'), err
 }

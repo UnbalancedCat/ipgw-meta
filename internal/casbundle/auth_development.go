@@ -19,6 +19,26 @@ type AuthDevelopment struct {
 
 var authNames = [3]string{"auth-dev.exe", "build-inputs.json", "ipgw-meta.exe"}
 
+func OpenWiFiDevelopment(directory, workerHash, inputsHash, productHash string) (*AuthDevelopment, error) {
+	names := []string{"build-inputs.json", "ipgw-meta.exe", "wifi-dev.exe"}
+	hashes := []string{inputsHash, productHash, workerHash}
+	for _, h := range hashes {
+		if !digestPattern.MatchString(h) {
+			return nil, ErrInvalid
+		}
+	}
+	b, paths, err := openAuthFiles(directory, names)
+	if err != nil {
+		return nil, ErrInvalid
+	}
+	d := &AuthDevelopment{b: b, names: names, hashes: hashes, ProductPath: paths[1], ObserverPath: paths[2]}
+	if d.Verify() != nil {
+		d.Close()
+		return nil, ErrInvalid
+	}
+	return d, nil
+}
+
 var authContextNames = []string{"auth-context.exe", "build-inputs.json", "ipgw-meta.exe"}
 
 // OpenAuthContext binds the separate anonymous-context identity. No historical

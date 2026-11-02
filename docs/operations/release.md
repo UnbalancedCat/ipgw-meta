@@ -5,6 +5,8 @@ revision: 2026-08-28-r2
 
 # 发布操作手册
 
+2026-11-01 当前增量由 [ADR-0026](../architecture/decisions/ADR-0026-bound-scan-dual-wifi.md) 和 [BHK 验收](bhk-acceptance.md) 定义，覆盖下文旧三组/两项与 lock v2 说明：lock v3 精确四份 evidence v3；installation_summary 单引用，wifi_summaries 精确 neu、neu_24g 两个引用，均为辅助 v2。当前 promotion 只接受该集合；history --version 1|2 仅作旧版本本地核验。Candidate/release manifest v1、祖先/白名单/attestation/原样晋升不变。先完成双 Wi-Fi 开发验证及 QR 修复，再另行授权统一新 Candidate，旧证据不跨包继承。
+
 2026-10-31 P4：当前 evidence/promotion v2、三组 BHK 必需认证及辅助门禁见 [BHK 正式验收 v2](bhk-acceptance.md)。当前生成与晋升使用 v2；旧四组和旧格式仅在显式历史审计中生效，历史回执不重写。Candidate/release manifest 仍为 v1；格式迁移不提升真实认证能力。
 
 v1 按门禁而不是日期发布。M0 残余历史治理继续跟踪但不参与 Candidate、Promotion 或 release 的状态判定；风险接受与仍保留的独立 hard gate 见 [`ADR-0011`](../architecture/decisions/ADR-0011-nonblocking-m0-governance.md)。
@@ -151,7 +153,7 @@ installation_summary 与 wifi_summary 各仅含 summary_id、sha256，按 [REL-B
 - 新安装默认模式：`meta`。
 - 既有安装默认模式：保持 `legacy`；迁移必须由维护者显式执行。
 - 配置迁移：使用 v1 事务化 preview/apply 流程；失败保持旧配置并保留可恢复状态。
-- Password 真实证据：promotion lock 绑定 Windows/BHK campus wired 与 campus Wi-Fi 两项通过记录。
+- Password 真实证据：promotion lock 绑定 Windows/BHK campus wired、NEU 与 NEU-2.4G 三项通过记录。
 - Terminal QR 真实证据：promotion lock 绑定 Windows/BHK campus wired 一项真实闭环通过记录。
 - 异账号 conflict/switch：仅有合成覆盖，不声明真实双账号验收。
 - OTP：仅 `observed_anonymous + detected_only`，不声明登录支持。

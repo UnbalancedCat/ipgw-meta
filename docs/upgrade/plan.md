@@ -20,6 +20,8 @@ release_policy: gate_based
 
 ### 0.1 当前有效规则、已确认目标与切换条件
 
+2026-11-02 统一源码准备入口见[检查点记录](../research/unified-candidate-preparation-2026-11-02.md)。现行目标以 ADR-0026 为准：认证/公开摘要/promotion v3、辅助 v2；有线 password、有线 QR、NEU password、NEU-2.4G password 四组认证，以及安装、NEU 网络、NEU-2.4G 网络三份辅助。下表及 0.3 的三组/v2 描述保留为 10 月 29 日至 P4 初版历史，不是新 Candidate 的验收矩阵。
+
 | 层次 | 当前解释 |
 |---|---|
 | 当前有效约束 | 现有安全、协议、正式 Candidate/live-gate/evidence/promotion 规范及工具继续生效；正式验收迁移以 [P4 v2 增量契约](../operations/bhk-acceptance.md) 为准，下文四组规则保留用于 v1 历史解释。历史执行步骤不构成重新迁移、重建或真实操作授权。 |
@@ -30,7 +32,29 @@ release_policy: gate_based
 
 D4–D15 证书与 CTL 专项诊断退出默认开发主线，代码、包、历史决策和结果全部保留。仅当新证据表明其直接阻塞产品认证，且明确了待区分的认证假设、所需观察与退出条件时，才重新安排相应工作。诊断安全与解析覆盖测试通过不等于服务端流程正确；受限诊断 TLS 失败也不能直接登记为产品默认系统 TLS 缺陷。不得默认继续扩展自建 Windows 信任引擎或通用 JavaScript 执行器。
 
+2026-11-01 执行更新：P4 残余 symlink 覆盖、新源码合入及正式 Candidate 构建/来源核验已完成，覆盖上段 10 月 31 日“新 Candidate 尚未取得”的历史状态。P5 当前进入同一 Candidate 的 BHK 安装辅助验收，之后才是另行授权的三组认证和 Wi-Fi 辅助窗口；具体身份与未完成项见 [P5 记录](../research/p5-readiness-2026-11-01.md#正式-candidate-与本机验收)。最终签名 tag、promotion 发布及公开 release 不在本次授权范围。
+
 ### 0.2 工作包、依赖与退出条件
+
+2026-11-02 最新下一步：QR 开发五步闭环已通过，退出码 0、最终 offline、无门禁失败，见[回执核验](../research/qr-continuation-progress-2026-11-02.md#后续窗口qr-开发闭环通过)。结合既有双 Wi-Fi 开发通过，转入统一源码差异、测试覆盖与剩余缺口审阅，准备新正式 Candidate 检查点；不再重复同包开发扫码。提交/推送/合并、正式 CI 构建、四组认证及三份辅助的真实验收仍需对应授权；旧 Candidate 和开发证据不能移作新 Candidate 证据。旧门禁失败具体原因仍未知，正式 QR 与 M3 不提升。以下同日“当前/下一步”保留为本次通过之前的历史执行记录。
+
+2026-11-02 当前下一步：门禁首因定位新包已完成离线验收和零网络 ready 预检，见[交付](../research/qr-continuation-progress-2026-11-02.md#当前交付门禁首因定位-v2)。只有重新建立目标账号 offline 及测试路径、取得新的单次授权后才进行真实 QR 验证；不自动重试或注销。旧窗口登录成功和注销未闭合事实保留，不提升正式状态。
+
+2026-11-02 后续门禁修复：断开接口残留默认路由误拒绝已修正，新 QR 开发包零网络 preflight ready，见[当前入口](../research/qr-continuation-progress-2026-11-02.md#后续更新残留默认路由修复及当前可测试包)。后续单次窗口已结束：QR 命令和独立目标 online 核对通过，注销阶段门禁 blocked，最终会话未知。下一步离线核对门禁停止原因，不自动重试；详见[窗口结果](../research/qr-continuation-progress-2026-11-02.md#最新窗口登录通过注销阶段门禁停止)。下段旧包 topology_unavailable 不再作为当前阻塞，不因此提升真实能力或正式验收。
+
+2026-11-02 当前 QR 执行入口：[ADR-0028](../architecture/decisions/ADR-0028-qr-service-continuation.md) 的无 ticket service 接续与独立普通产品开发包已完成离线实现。两端回归、Linux race/fuzz、六平台构建和包绑定通过；本机零网络 preflight 为 topology_unavailable，未进行真实请求。完整结果及未覆盖项见[实施记录](../research/qr-continuation-progress-2026-11-02.md)。下一步是重新建立并确认有线测试路径、另行授权一次私有终端 QR 开发窗口；不得沿用浏览器代理路径或历史地址。真实 QR 结果明确后才统一新 Candidate，重新取得全部正式证据。以下按日期保留此前调查与顺序记录，不代表仍需重复采集。
+
+2026-11-01 QR 主线恢复：双 Wi-Fi 开发验证后，维护者批准 [ADR-0027](../architecture/decisions/ADR-0027-browser-qr-contract.md)。先核对网页契约与固定版本 QR 实现，再决定最小修复；旧失败摘要可能合并 QR 后的 status 错误，不能定位为轮询失败。离线准备、缺失材料及剩余授权见[QR 研究记录](../research/qr-browser-contract-2026-11-01.md)。后续无痕桌面扫码对照须单次授权；产品普通状态查询确认目标身份后才注销，不网页注销或手机抓包。当前无已证实产品根因，不生成猜测修复包，不沿用历史真实授权。
+
+2026-11-01 后续需求（仅记录，暂不实现）：维护者提出校园网有线接入自有无线路由器时，其下游 SSID 可以自定义。未来应支持显式指定此类测试路径，不把学校公布的 SSID 集合等同于所有可用接入方式。后续工作须区分桥接/NAT、源地址与校园侧会话身份、状态/注销影响范围及证据场景，不能只增加任意名称白名单就宣称等价。该需求不改变本轮 NEU、NEU-2.4G 验收范围或当前门禁；公共产品枚举/扫描本身不按校园 SSID 白名单隐藏接口。
+
+2026-11-01 双 Wi-Fi 后续：维护者批准 [ADR-0026](../architecture/decisions/ADR-0026-bound-scan-dual-wifi.md)。定向扫描、SSID、认证 v3/辅助 v2/promotion v3 迁移及独立开发包已离线交付，见[实施记录](../research/wifi-bound-progress-2026-11-01.md)。NEU、NEU-2.4G 两个单独授权的开发窗口均已回传辅助及 password_core 全 pass，明确非发布证据；双 Wi-Fi 开发验证已闭合，既有离线检查限制继续单列。NEU-Mobile 与自定义 SSID 暂缓；下一发布依赖是 QR 收敛，之后再统一新 Candidate。当前目标为四组认证和三份辅助，覆盖下方旧三组目标；正式验收尚未完成，不继承开发通过记录。旧四组/三组记录按日期保留。
+
+2026-11-01 最新执行顺序：维护者选择暂缓 QR，先验收同一 Candidate 的 Wi-Fi 辅助及 password_core。先备齐本地文件与断网说明；断开有线后，一次辅助完整通过才进入一次密码套件，失败停止，恢复管理连接后再核验回执。QR 保持未完成的发布必需项，不以调整顺序免除门禁；下段“先处理 QR”的记录保留为调整前安排。
+
+2026-11-01 QR 后续：第一次正式有线 terminal_qr 在扫码后的登录步骤返回 protocol_changed，尚未建立最终会话状态；先处理 [QR 协议证据缺口](../research/p5-readiness-2026-11-01.md#有线正式-terminal_qr-失败回执)，不重复同包或自动推进 Wi-Fi。下段是 QR 窗口之前的通过项与顺序记录；有线密码及安装通过保留，后续修复若改变 Candidate 则不能跨 Candidate 复用证据。
+
+2026-11-01 验收进展：同一正式 Candidate 的 BHK 安装辅助及有线 password_core 已通过。下一待授权项为有线 terminal QR，之后完成 Wi-Fi 辅助与 password_core；三组认证、两份辅助摘要及 promotion 人工审阅尚未全部闭合。依据见 [P5 回执](../research/p5-readiness-2026-11-01.md#有线正式-password_core-回执)，不重复已通过的有线密码窗口。
 
 | 阶段 / WP | 依赖 | 工作与交付 | 退出条件 |
 |---|---|---|---|
