@@ -20,6 +20,8 @@ status: approved
 
 ## 2026-10-29 当前摘要：认证收敛路线
 
+2026-11-02 签名替代已合并：PR #31 经 13/13 检查后标准 squash，main 为 `f56c1ded009b36f3da8a1c16608f524e4a38f08b`，签名有效且文件树与审阅版本一致，旧 PR #30 关闭、分支保留。合并后的 main 检查为 12/13，Windows Candidate 目录身份测试失败；已离线确认测试 Lstat 延迟身份读取与生产句柄快照不等价，正在准备测试修正的独立检查点。详见[合并与失败调查](../research/unified-candidate-preparation-2026-11-02.md#后续签名替代合并及-main-身份测试失败)。新 Candidate 未启动，正式 QR/双 Wi-Fi 仍待同一新 Candidate 验收，M3 保持 in_progress；下方提交前和旧 PR 状态保留为历史。
+
 本摘要是当前状态入口；下方 8 月至 9 月日期明确的快照及其“当前/下一步”原文保留，只表示当时状态。当前执行交接位于 [BHKDesktop 交接](../../agent/handoff-bhkdesktop-2026-10-28.md)，原 `agent/handoff.md` 保持历史用途。后续顺序以[当前 roadmap](plan.md#roadmap-20261029)为准，不重做迁移、环境初始化或历史 RC-BUILD。
 
 <a id="status-20261031-p4"></a>

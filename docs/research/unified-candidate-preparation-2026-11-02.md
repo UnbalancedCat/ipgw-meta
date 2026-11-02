@@ -8,6 +8,16 @@ status: approved
 
 本页记录 `WP-AUTH-CANDIDATE-ACCEPTANCE` 的源码审阅准备，不生成 Candidate 或正式证据。当前路线以[roadmap](../upgrade/plan.md#roadmap-20261029)为准；[双 Wi-Fi 开发结果](wifi-bound-progress-2026-11-01.md)和[QR 五步闭环](qr-continuation-progress-2026-11-02.md#后续窗口qr-开发闭环通过)已明确，单次授权均已消耗。
 
+## 后续：签名替代合并及 main 身份测试失败
+
+维护者授权的签名替代已完成：[PR #31](https://github.com/UnbalancedCat/ipgw-meta/pull/31) 从固定 main 创建 GitHub 签名提交 `9f695d46763f3fdece02e16892ad1386387c87d2`，13 项检查全部通过后标准 squash 合并。新 main 为 `f56c1ded009b36f3da8a1c16608f524e4a38f08b`，签名 valid、父节点为 `1a32aabc2aa3125afe638b0dc3d3444bf7a95c7d`，文件树精确等于已审阅的 `9d58bc00b5c09a9a36f6e8ca1697cbe19b68b81a`。PR #30 已关闭为被替代，原分支与提交保留；未强推、修改保护或安装签名密钥。此前本地提交未签名是准备检查遗漏，不能以 PR CI 通过替代签名检查。
+
+合并后的 [main CI](https://github.com/UnbalancedCat/ipgw-meta/actions/runs/41452754606) 与[原生安装](https://github.com/UnbalancedCat/ipgw-meta/actions/runs/41452754779) 合计 12/13 通过；Windows 的 `TestPublishCandidateDirectoryRejectsReplacedStageIdentity` 失败。它不是此前 PowerShell 超时，未自动重跑；新 Candidate 保持阻塞，正式认证及 M3 不提升。
+
+离线调查确认测试使用 `os.Lstat`，而生产 `Assemble` 从 `seal.rootDirectory.info` 取得已打开句柄的身份。固定本地 Go 1.25.0 的 Windows 实现会对部分路径 FileInfo 延迟加载文件 ID；独立合成复现中，旧 Lstat 对象在路径被替换后与替换对象 SameFile=true，句柄快照为 false，原目录仍存在于移走位置。这证明测试的身份采集不等价于生产路径，不是生产门禁需要放宽。只修改发布测试使用相同快照，并令替换目录的大小、模式和修改时间相同，验证身份本身必须拒绝；生产代码、门禁及协议不变。
+
+精确合并回执、复现、测试报告与后续差异位于 `build/p5-unified-preparation-20261102/`。修正仍为本地未提交内容；新提交/PR 及远端检查须单独检查点，不能把本地回归写作 main CI 已修复。首次 Linux 检查误把临时目录置于 Windows 挂载盘，相关失败保留；后续使用既有 Linux 原生临时目录，未修改测试判据来兼容错误的执行位置。
+
 ## 后续：PR #30 与 Windows 合成夹具修正
 
 原 99 文件清单经维护者授权后，已从固定 main 创建 `codex/bhk-wifi-qr-closure`，提交 `35dd57183d667d1766d0223772a598e0052dbd60` 并推送为 [PR #30](https://github.com/UnbalancedCat/ipgw-meta/pull/30)。该提交父节点为 `1a32aabc2aa3125afe638b0dc3d3444bf7a95c7d`，PR 精确包含一个提交、99 文件；四个未跟踪 Python 缓存保留且未提交。下文未提交描述保留为该授权之前的检查点。
