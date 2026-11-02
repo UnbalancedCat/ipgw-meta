@@ -5,6 +5,8 @@ revision: 2026-08-28-r2
 
 # 校园网实验室运行手册
 
+2026-11-01 增量优先于下方日期较早说明：[双 SSID 验收](../operations/bhk-acceptance.md) 使用 Native Wi-Fi 当前连接核验 NEU、NEU-2.4G，NEU-Mobile 暂缓；不扫描周边热点、不自动连接。bound 扫描只探测显式选定地址，允许无关虚拟地址；SSID 是场景身份，不代表认证成功或可信网络。四组认证/三份辅助使用新版本；旧包与历史窗口保留。切换测试网络前准备自包含说明，失败停止、退出后恢复有线，不保留有线绕过独占条件。
+
 2026-10-31 P4：当前 evidence/promotion v2、三组 BHK 必需认证及辅助门禁见 [BHK 正式验收 v2](../operations/bhk-acceptance.md)。当前生成与晋升使用 v2；旧四组和旧格式仅在显式历史审计中生效，历史回执不重写。Candidate/release manifest 仍为 v1；格式迁移不提升真实认证能力。
 
 本手册约束双网口 NAS 和 BHK Windows 的真实网络测试面。任何无法证明的拓扑状态都按不安全处理。

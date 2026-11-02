@@ -52,7 +52,7 @@ func TestBundlePublisherPublishesExactBundle(t *testing.T) {
 
 	wantSummary := []byte(fmt.Sprintf(
 		"# IPGW-Meta live-gate summary\n\n"+
-			"- schema_version: 2\n"+
+			"- schema_version: 3\n"+
 			"- plan_id: IPGW-META-V1\n"+
 			"- revision: 2026-08-28-r2\n"+
 			"- evidence_id: %s\n"+
@@ -63,6 +63,7 @@ func TestBundlePublisherPublishesExactBundle(t *testing.T) {
 			"- platform: linux-amd64\n"+
 			"- testbed: nas_vm\n"+
 			"- network_type: campus_wired\n"+
+			"- wifi_ssid: null\n"+
 			"- auth_method: password\n"+
 			"- suite: password_core\n"+
 			"- capability_before: synthetic_covered,live_unverified\n"+

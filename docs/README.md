@@ -32,6 +32,9 @@ revision: 2026-08-28-r2
 - [离线安装规范](operations/offline-install.md)
 - [真实校园网验收规范](operations/live-validation.md)
 - [协议研究快照](research/active-implementations.md)
+- [三网络手动测试与 ac_id 实现对照（2026-11-01）](research/ac-id-comparison-2026-11-01.md)
+- [QR 失败解释与网页契约核对（2026-11-01）](research/qr-browser-contract-2026-11-01.md)
+- [Wi-Fi/QR 统一 Candidate 源码准备（2026-11-02）](research/unified-candidate-preparation-2026-11-02.md)
 - [P1 旧版与 v1 认证行为对照（2026-10-29）](research/auth-baseline-2026-10-29.md)
 - [脱敏证据规范](evidence/README.md)
 

@@ -95,6 +95,50 @@ func TestHistoricalBundleAuditIsReadOnly(t *testing.T) {
 	}
 }
 
+func TestHistoricalV2AndAuxV1AuditsCannotExportCurrentSummary(t *testing.T) {
+	for _, version := range []int{2, -1} {
+		t.Run(fmt.Sprint(version), func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "history")
+			if err := ensureBundlePrivateDirectory(path); err != nil {
+				t.Fatal(err)
+			}
+			var raw, summary []byte
+			if version == 2 {
+				e := validPasswordEvidence()
+				e.SchemaVersion = 2
+				raw, _ = json.MarshalIndent(e, "", "  ")
+				raw = append(raw, '\n')
+				summary = buildBundleSummary(e)
+			} else {
+				a := validAuxiliary()
+				a.SchemaVersion = 1
+				a.WiFiSSID = nil
+				raw, _ = json.Marshal(a)
+				raw = append(raw, '\n')
+				summary = auxiliarySummary(a)
+			}
+			files := map[string][]byte{bundleEvidenceName: raw, bundleSummaryName: summary, bundleChecksumsName: buildBundleChecksums(raw, summary)}
+			for name, data := range files {
+				if err := writePrivateBundleFile(filepath.Join(path, name), data); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := auditHistoricalBundleVersion(path, version); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := PublicSummary(path); err == nil {
+				t.Fatal("historical export")
+			}
+			for name, data := range files {
+				after, err := os.ReadFile(filepath.Join(path, name))
+				if err != nil || !bytes.Equal(after, data) {
+					t.Fatal("rewritten")
+				}
+			}
+		})
+	}
+}
+
 func TestV2RunnerBindingDetectsMismatchAndDrift(t *testing.T) {
 	fixture := newCandidateTestFixture(t)
 	v, err := VerifyCandidateBefore(fixture.candidate, fixture.manifest, fixture.explicitSHA, fixture.platform)

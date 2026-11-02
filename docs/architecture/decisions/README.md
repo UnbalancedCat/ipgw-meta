@@ -32,5 +32,8 @@ revision: 2026-08-28-r2
 | [ADR-0023](ADR-0023-browser-logout-comparison.md) | accepted | Chrome 注销对照、维护者先脱敏与独立状态确认 |
 | [ADR-0024](ADR-0024-logout-explicit-callback.md) | accepted | 共享注销显式callback，保持既有业务与offline判据 |
 | [ADR-0025](ADR-0025-bhk-formal-acceptance.md) | accepted | BHK v2 正式认证、执行者绑定与辅助发布门禁 |
+| [ADR-0026](ADR-0026-bound-scan-dual-wifi.md) | accepted | 显式定向扫描、真实 SSID 核对及双 Wi-Fi 验收 |
+| [ADR-0027](ADR-0027-browser-qr-contract.md) | accepted | 网页 QR 契约优先、无痕桌面对照与独立状态证明 |
+| [ADR-0028](ADR-0028-qr-service-continuation.md) | accepted | QR 无 ticket service 的有界接续与独立开发验证 |
 
 新增或改变公共行为时新建 ADR，不改写已接受 ADR 的历史结论；被替代的记录标为 `superseded` 并链接后继记录。

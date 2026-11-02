@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	SchemaVersion           = 2
+	SchemaVersion           = 3
 	HistoricalSchemaVersion = 1
 	PlanID                  = "IPGW-META-V1"
 	Revision                = "2026-08-28-r2"
@@ -154,6 +154,7 @@ type Evidence struct {
 	StartedAt          Timestamp          `json:"started_at"`
 	FinishedAt         Timestamp          `json:"finished_at"`
 	Steps              []Step             `json:"steps"`
+	WiFiSSID           *string            `json:"wifi_ssid,omitempty"`
 }
 
 // Step is the exact version 1 evidence step object.
@@ -213,12 +214,18 @@ var terminalQRCapabilitiesAfter = [...]CapabilityStatus{
 }
 
 func (e Evidence) Validate() error {
-	if e.SchemaVersion != SchemaVersion && e.SchemaVersion != HistoricalSchemaVersion {
+	if e.SchemaVersion != SchemaVersion && e.SchemaVersion != 2 && e.SchemaVersion != HistoricalSchemaVersion {
 		return invalidEvidence("schema version")
 	}
-	if (e.SchemaVersion == SchemaVersion && !lowerHex64Pattern.MatchString(e.RunnerSHA256)) ||
+	if (e.SchemaVersion >= 2 && !lowerHex64Pattern.MatchString(e.RunnerSHA256)) ||
 		(e.SchemaVersion == HistoricalSchemaVersion && e.RunnerSHA256 != "") {
 		return invalidEvidence("runner hash")
+	}
+	if e.SchemaVersion < 3 && e.WiFiSSID != nil {
+		return invalidEvidence("historical wifi field")
+	}
+	if e.SchemaVersion == 3 && !validWiFiIdentity(e.NetworkType == NetworkCampusWiFi, e.WiFiSSID) {
+		return invalidEvidence("wifi identity")
 	}
 	if e.PlanID != PlanID {
 		return invalidEvidence("plan ID")
@@ -353,7 +360,7 @@ func validMatrix(platform Platform, testbed Testbed, network NetworkType, auth A
 }
 
 func validMatrixVersion(version int, platform Platform, testbed Testbed, network NetworkType, auth AuthMethod, suite Suite) bool {
-	if version == SchemaVersion && platform == PlatformWindowsAMD64 && testbed == TestbedBHKWindows &&
+	if version >= 2 && platform == PlatformWindowsAMD64 && testbed == TestbedBHKWindows &&
 		(network == NetworkCampusWired || network == NetworkCampusWiFi) && auth == AuthMethodTerminalQR && suite == SuiteTerminalQR {
 		return true
 	}

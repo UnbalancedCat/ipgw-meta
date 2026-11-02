@@ -5,6 +5,22 @@ revision: 2026-08-28-r2
 
 # BHK 正式验收 v2
 
+## 2026-11-01 已批准增量：双 SSID（实施中）
+
+[ADR-0026](../architecture/decisions/ADR-0026-bound-scan-dual-wifi.md) 批准定向扫描与双 SSID 迁移；下文 v2 保留为旧 Candidate 与历史证据的契约，不能把批准当作实现通过。
+
+新生成认证 evidence/公开摘要为 v3，辅助记录/公开摘要为 v2，promotion lock 为 v3。新增必需字段 wifi_ssid：无线为 neu 或 neu_24g；neu_mobile 是已知但暂不支持的场景，不生成成功记录；有线和安装为 null。旧 v1/v2 认证、v1 辅助及旧 lock 仅显式只读历史审计，不能补造字段或用于当前晋升。
+
+新 lock 的 evidence_ids 精确四份：有线 password、有线 QR、NEU password、NEU-2.4G password。installation_summary 保持单引用；wifi_summary 替换为 wifi_summaries，精确包含 neu、neu_24g 两个键，每项仍为 summary_id/sha256。认证、辅助、Candidate/helper 身份须全部一致。
+
+Wi-Fi 辅助不再要求全机只有一个地址，而要求本地列表中选定地址恰有一个匹配项且对应选定物理 Wi-Fi；保留全表检查、大小限制、重复拒绝和拓扑监测。调用 network scan --scope bound，扫描结果仍必须恰好一个选定项且无逐项错误。SSID 通过 Native Wi-Fi API 当前连接信息与接口 GUID 关联，核对 NEU/NEU-2.4G；其他 SSID、断开、读取失败/权限拒绝停止，不能以手填或接口别名替代。SSID 变化停止包括 cleanup。不扫描附近网络、不自动连接或改变权限。
+
+零网络预检复用本地选择和包绑定逻辑，不读取 profile、不调用 status，仅返回闭集原因及数量。开发包明确 release_evidence=false；不产生正式 bundle。先离线和开发验证，QR 修复收敛后再申请新正式 Candidate；旧通过结果不跨包转移。
+
+v3 认证私有记录与公开摘要在原字段末尾增加必需 wifi_ssid，null 也必须编码；v2 辅助私有记录在 verifier 后增加 wifi_ssid，公开摘要再追加 bundle_sha256。旧字段顺序和旧摘要字节在历史入口保持。新 helper 的无线 run/check-network 必需 --wifi-ssid neu|neu_24g，与实际读取一致才继续；有线禁止该参数。audit-v1、audit-v2、audit-aux-v1 分别只读相应旧私有记录；promotion.py history --version 1|2 核验旧 lock、旧精确 notes 和其引用的本地摘要，不查询线上 provenance、不写入当前发布输出。
+
+开发入口为独立 wifi-dev-launch，--preflight neu|neu_24g 只做包绑定、本地拓扑/SSID、SDK 本地枚举范围核对；独立子进程硬期限 45 秒，输出最多 64 KiB。--run-once SSID PROFILE 在私有 TTY 一次确认后，先复做预检，再复用正式辅助逻辑；仅全 pass 后运行普通开发产品的 password_core 状态机。辅助阶段 120 秒，密码阶段 10 分钟，启动器整体硬期限 14 分钟并使用退出清理子进程 Job；超时不伪造 cleanup 或 offline。读取 profile 前核对路径，密码只由产品私有 TTY 获取，不使用 observed CLI。对外回执只有包身份、闭集 SSID、检查结果、密码步骤和 release_evidence=false；不输出地址、接口名或原始错误。硬停止后账号状态按未知处理，由维护者恢复有线管理连接后报告，不自动重复或注销。
+
 ## REL-BHK-GATES-001：政策与切换
 
 [ADR-0025](../architecture/decisions/ADR-0025-bhk-formal-acceptance.md) 已批准；实施状态见 [status](../upgrade/status.md)。P4 全部验收前不得宣称工具已完成切换。日期明确的 v1 回执及旧包不重写。以下是 v2 的权威增量契约；未变的状态机、持久化、安全和 Candidate provenance 契约继续适用。
@@ -22,6 +38,8 @@ runner manifest projection 在旧必需字段外读取 test_tools，精确两项
 ## REL-BHK-PATH-001：原生测试路径
 
 BHK `ipgw-live-gate run` 必需 --bind-ip IPv4，沿用既有其余参数。所选 IPv4 必须唯一对应声明网络类型的活动硬件接口；唯一 IPv4 默认路由属于该接口，拒绝两条半默认覆盖路由。允许不影响测试路径的虚拟接口，另一类物理测试接口不得同时活动。保留有界接口/路由/DNS 快照；每命令前及运行期间复核，变化 sticky 停止，包括 cleanup。不修改接口、路由、DNS、代理或防火墙。
+
+2026-11-02 默认路由计数澄清：所选接口的 IPv4 ConnectionState 必须唯一且为 Connected。仅当某条默认路由唯一对应的适配器 Status 与 IPv4 ConnectionState **均明确为 Disconnected** 时，该残留项不计入默认路由唯一性判断；不存在、重复、未知或矛盾状态均不享有排除。活动竞争默认路由仍拒绝，不按 metric 猜选。所有路由仍保留在快照，全部适配器及对应 IPv4 连接状态也参与指纹；重连或状态变化仍停止后续命令及 cleanup。半默认覆盖路由拒绝规则不变。依据及离线验收见 [ADR-0028](../architecture/decisions/ADR-0028-qr-service-continuation.md#断开接口残留默认路由修正)。
 
 全部产品命令（含私有 TTY QR）透传同一绑定。网络/拓扑信息仅内存处理，不写回 evidence；系统 DNS/PKI 仍可能联网和更新缓存，不承诺逐目标路由锁或 OS 总流量计数。password 七步、QR 五步和清理所有权保持。NAS 的既有隔离实验室规则不变，不套用 Windows 探针。
 

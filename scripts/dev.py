@@ -12,7 +12,7 @@ import uuid
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage", choices=("p4", "logout-structure", "key-relation", "focus", "install", "test", "race", "vet", "docs", "quality", "build", "cross", "cas-observe", "cas-provenance", "cas-binding", "cas-install", "cas-collect", "cas-acquire", "trust-audit", "ctl-check", "ctl-identifiers", "ctl-member", "auth-dev", "auth-context", "auth-static-context"))
+    parser.add_argument("stage", choices=("qr-dev", "wifi-dev", "p4", "logout-structure", "key-relation", "focus", "install", "test", "race", "vet", "docs", "quality", "build", "cross", "cas-observe", "cas-provenance", "cas-binding", "cas-install", "cas-collect", "cas-acquire", "trust-audit", "ctl-check", "ctl-identifiers", "ctl-member", "auth-dev", "auth-context", "auth-static-context"))
     parser.add_argument("--run", help="Go test name expression; only valid with the install stage")
     parser.add_argument("--test-temp-root", type=Path, help="Existing absolute test-only directory outside the repository; no system TEMP changes")
     parser.add_argument("--context", choices=("unspecified", "desktop-native", "tool"), default="unspecified", help="Caller-declared execution context, not an isolation guarantee")
@@ -37,7 +37,7 @@ def main():
     # Installation fixtures must stay outside the repository; also avoid deep
     # paths because Windows executable/junction consumers have differing limits.
     temporary = home / "t" / uuid.uuid4().hex[:8] if windows else isolated / "tmp"
-    if windows and args.stage in ("logout-structure", "key-relation", "cas-binding", "cas-install", "cas-acquire", "trust-audit", "ctl-check", "ctl-identifiers", "ctl-member", "auth-dev", "auth-context", "auth-static-context"):
+    if windows and args.stage in ("qr-dev", "wifi-dev", "logout-structure", "key-relation", "cas-binding", "cas-install", "cas-acquire", "trust-audit", "ctl-check", "ctl-identifiers", "ctl-member", "auth-dev", "auth-context", "auth-static-context"):
         # These are development bundle fixtures, not product installer/profile tests.
         # Keep them on the shared workspace volume so canonical handle paths
         # are testable even when the desktop tool virtualizes LOCALAPPDATA.
@@ -101,7 +101,33 @@ def main():
         if code:
             raise SystemExit(code)
 
-    if args.stage == "p4":
+    if args.stage == "qr-dev":
+        packages = [".", "./internal/srun", "./internal/qrdev", "./internal/livegate", "./internal/labpath", "./internal/casbundle", "./internal/cmd/qr-dev", "./internal/cmd/qr-dev-launch"]
+        run("qr-tests", [str(go), "test", "-json", "-count=1"] + packages)
+        run("qr-vet", [str(go), "vet"] + packages)
+        run("qr-self-test", [str(go), "run", "./internal/cmd/qr-dev", "--self-test"])
+        if not windows:
+            run("qr-race", [str(go), "test", "-race", "-count=1"] + packages)
+            run("qr-fuzz", [str(go), "test", "./internal/srun", "-run=^$", "-fuzz=^FuzzQRContinuation$", "-fuzztime=5s", "-parallel=2"], timeout=60)
+        else:
+            bundle = report_dir / "ready"
+            run("qr-build", [shutil.which("python"), "scripts/build-qr-dev.py", "--output", str(bundle)])
+            run("qr-chain", [str(bundle / "qr-dev-launch.exe"), "--self-test"], timeout=55)
+            run("qr-build-audit", [shutil.which("python"), "scripts/check-qr-dev-build.py", "--directory", str(bundle)], timeout=180)
+    elif args.stage == "wifi-dev":
+        packages = ["./internal/wifidev", "./internal/cli", "./internal/labpath", "./internal/cmd/wifi-dev", "./internal/cmd/wifi-dev-launch"]
+        run("wifi-tests", [str(go), "test", "-json", "-count=1"] + packages)
+        run("wifi-vet", [str(go), "vet"] + packages)
+        run("wifi-self-test", [str(go), "run", "./internal/cmd/wifi-dev", "--self-test"])
+        if not windows:
+            run("wifi-race", [str(go), "test", "-race", "-count=1"] + packages)
+            run("wifi-fuzz", [str(go), "test", "./internal/labpath", "-run=^$", "-fuzz=^FuzzWiFiConnection$", "-fuzztime=5s", "-parallel=2"], timeout=60)
+        else:
+            bundle = report_dir / "ready"
+            run("wifi-build", [shutil.which("python"), "scripts/build-wifi-dev.py", "--output", str(bundle)])
+            run("wifi-chain", [str(bundle / "wifi-dev-launch.exe"), "--self-test"], timeout=55)
+            run("wifi-build-audit", [shutil.which("python"), "scripts/check-wifi-dev-build.py", "--directory", str(bundle)], timeout=180)
+    elif args.stage == "p4":
         packages = ["./internal/livegate", "./internal/candidate", "./internal/auxgate", "./internal/labpath", "./internal/cmd/ipgw-live-gate"]
         run("p4-tests", [str(go), "test", "-json", "-count=1"] + packages)
         run("p4-vet", [str(go), "vet"] + packages)
@@ -323,7 +349,7 @@ def main():
                 label = system + "-" + arch + "-" + binary
                 run(label + "-deps", [str(go), "list", "-deps", "./cmd/" + binary], overrides={"CGO_ENABLED": "0", "GOOS": system, "GOARCH": arch})
                 dependencies = (report_dir / (label + "-deps.log")).read_text().splitlines()
-                forbidden = ("/internal/auxgate", "/internal/livegate", "/internal/labpath", "/internal/authdev", "/internal/authobserve", "/internal/authcontext", "/internal/caslegacy", "/internal/castest", "/internal/ctlcheck", "/internal/casacquire", "/internal/trustaudit", "/internal/casbundle", "/internal/cascollect", "/internal/casprovenance", "/internal/cmd/")
+                forbidden = ("/internal/qrdev", "/internal/wifidev", "/internal/auxgate", "/internal/livegate", "/internal/labpath", "/internal/authdev", "/internal/authobserve", "/internal/authcontext", "/internal/caslegacy", "/internal/castest", "/internal/ctlcheck", "/internal/casacquire", "/internal/trustaudit", "/internal/casbundle", "/internal/cascollect", "/internal/casprovenance", "/internal/cmd/")
                 if any(any(marker in dependency for marker in forbidden) or (dependency.startswith("github.com/dop251/goja") and dependency not in ("github.com/dop251/goja/ast", "github.com/dop251/goja/file", "github.com/dop251/goja/token", "github.com/dop251/goja/unistring")) for dependency in dependencies):
                     result["passed"] = False
                     result["product_dependency_isolation"] = False

@@ -1073,3 +1073,57 @@ Hand off 曾先被 pending composer state 阻止，后因 `No matching saved pro
 - 维护者私有终端回传新包七步全pass；严格解码、五项包哈希和211项源码快照核验通过。脱敏回执及身份检查见 `build/logout-callback-live-20261031/`，当前结论见[开发闭环状态](../docs/upgrade/status.md#status-20261031-password-dev-pass)。
 - 首次注销的JSONP业务解析与offline复核均通过，最后幂等注销不发送额外logout；没有cleanup。只记录窗口末尾offline，不能推断当前持续状态。原始终端账号提示未保存。
 - 单次授权已消耗；Agent只做离线证据复核和文档更新，没有重跑或新增产品实现。下一工作包依[roadmap](../docs/upgrade/plan.md#roadmap-20261029)进入P4规则收敛，正式Candidate、里程碑和既有平台/安装缺口保持。
+
+### 2026-11-01 P5 正式 Candidate 构建与离线验收
+
+- P4 补充覆盖、PR #29 合并及一次正式 Candidate workflow 已按各自具体授权执行；新 Candidate 来源、六平台安装和 11 项独立 attestation 复核通过。完整身份及本机安装执行结果见 [P5 记录](../docs/research/p5-readiness-2026-11-01.md#正式-candidate-与本机验收)，正式状态见 [status](../docs/upgrade/status.md#status-20261031-p4)。
+- 本地仍在 codex/bhk-v1-acceptance；Candidate 使用已合入的 squash main，不混用本地分支提交身份。旧分支、旧包、首次失败回执和未跟踪缓存保留。新执行文档变更尚未提交；本轮不自动推送。
+- 后续依赖为同一 Candidate 的 BHK 安装辅助验收闭合，再进入另行授权的有线 password/QR 与预先准备的 Wi-Fi 窗口。未读取真实 profile/凭据、未执行校园请求，未创建最终 tag/release；原 handoff 的历史快照不重写。
+- 收尾：安装辅助第 003 份回执及其只读 bundle 核验通过；前两份 blocked 保留。执行环境要求标准提升上下文及短的独立测试 work-root，来源和结论边界见上述 P5 记录。下一待授权项为有线正式 password_core，密码仍只由维护者在私有终端输入；当前认证状态不从早先现场条件推断。
+- 后续单次窗口：维护者已授权该 Candidate 的一次有线正式 password_core，并重新确认现场条件。普通产品从已验证 Windows 归档选择性提取至新私有目录，产品/manifest/helper 哈希核验通过；私有终端入口为 `build/p5-preparation-20261101/run-wired-password-once.ps1`。Agent 仅执行 CheckOnly，没有读取 profile、查询校园状态或启动认证；等待维护者在私有终端执行并回传末尾脱敏 JSON。入口一次性标记阻止盲目重跑，原始认证输出不落盘；本条不表示正式验收已通过，也不授权 QR/Wi-Fi 窗口。
+- 原生终端反馈上述 LOCALAPPDATA 产品不存在；失败发生在首个哈希检查，尚未启动 runner、读取 profile 或消耗真实认证运行。工具上下文的 C 盘可见性检查不能代替维护者终端可见性。已从 D 盘已验证原件准备新的共享 D 盘私有运行子集（普通产品、manifest、对应 helper），原件及旧入口保留；当前入口改为 `build/p5-preparation-20261101/run-wired-password-shared-once.ps1`。CheckOnly 三项固定哈希通过，仅收紧新目录/文件权限，未变更产品或 helper 字节；等待维护者执行同一次尚未开始的授权窗口。
+- 窗口收尾：维护者已完成有线正式 password_core，七步全部通过、无 cleanup；Agent 对新 v2 bundle、步骤及 Candidate/产品/helper 绑定的只读复核通过，见 [正式回执](../docs/research/p5-readiness-2026-11-01.md#有线正式-password_core-回执) 和 [状态](../docs/upgrade/status.md#status-20261031-p4)。本次授权已消耗，不重复运行；下一待授权项为有线 terminal QR，密码与二维码仍只在维护者私有终端处理。尚未完成 Wi-Fi 两项、摘要人工审阅或 promotion，M3 不提前完成。
+- 有线 QR 准备：维护者已单独授权同一 Candidate 的一次 terminal_qr，并重新确认当前现场条件。新入口 `build/p5-preparation-20261101/run-wired-qr-shared-once.ps1` 使用已验证的共享 D 盘私有运行子集；语法、固定 suite、三文件哈希和独立一次性标记检查通过。Agent 仅执行 CheckOnly，未读取 profile、启动网络或查看二维码；等待维护者在私有终端扫码及回传末尾结果行。该授权不覆盖 Wi-Fi，不重复有线密码窗口。
+- QR 窗口收尾：回执 fail，初始 offline 通过，QR 登录返回 protocol_changed；维护者确认已展示、扫码并确认。Agent 完成只读 bundle/步骤/文件绑定复核，无 cleanup、无最终状态证据，详见 [QR 记录](../docs/research/p5-readiness-2026-11-01.md#有线正式-terminal_qr-失败回执)。单次授权已消耗，不重跑、不自动注销或进入 Wi-Fi；下一依赖是失败阶段与网页确认契约的证据，正式 Candidate 保持冻结，既有通过回执不改写。
+- 执行顺序调整：维护者要求暂缓 QR 并明确批准一次 Wi-Fi 辅助、仅完整通过后一次密码套件。已在共享 D 盘现有私有运行根补齐同字节 14 文件 Candidate，不覆盖旧文件或 evidence；入口 `build/p5-preparation-20261101/run-wifi-window-once.ps1` 和本地 `WIFI-OFFLINE-HANDOFF.md` 已准备，语法及 CheckOnly 文件校验通过。Agent 未查询校园状态、切网或开始测试；维护者按说明断开有线并在私有终端独立执行，恢复管理连接后回传脱敏结果。QR 失败及发布必需性保持，当前 Wi-Fi 尚未验证。
+# 2026-11-01 双 SSID 工作包开始
+
+维护者已批准 [ADR-0026](../docs/architecture/decisions/ADR-0026-bound-scan-dual-wifi.md) 对应工作：先规范，再定向扫描、SSID 核对、证据迁移及离线开发包。QR 暂缓；不执行校园请求、不改网络配置、不提交或生成 Candidate。现有四份文档修改与缓存保留。Wi-Fi 辅助首次运行在 selected_address_unique blocked，password 未启动；旧包和回执保留。当前只进入离线实施，不声明完成。
+
+组件交接：定向扫描、Native Wi-Fi 读取及 Snapshot SSID 比较已实现；组件回归、Linux race/vet/fuzz 和文档检查通过，Windows 安装长路径失败及短路径复核单列。证据版本迁移、promotion、预检及开发包仍未完成，下一步继续这些依赖，不请求真实复测。具体结果及剩余项见[实施记录](../docs/research/wifi-bound-progress-2026-11-01.md)。
+
+后续离线交付：上述剩余链路现已完成，最终两端验收、skip/环境限制、开发包身份及本地零网络 blocked 回执均见[实施记录](../docs/research/wifi-bound-progress-2026-11-01.md)。下一依赖是另行授权 NEU、NEU-2.4G 的开发窗口；QR 仍暂缓，后续统一新 Candidate，不跨包继承证据。分支/HEAD 未变化，未暂存/提交/推送或执行校园请求，未改网络/Clash。旧 handoff、四份先存文档修改、缓存及旧包保留。
+
+NEU 首次维护者执行在零网络预检 blocked；维护者说明 TUN 未关，并明确要求同包再试一次。Agent 仅记录回执和核对启动器哈希，下一步仍是维护者私有终端窗口；范围及停止条件见[实施记录](../docs/research/wifi-bound-progress-2026-11-01.md)。自有路由器/自定义 SSID 需求只记录于 roadmap，留后续设计，不在本轮实施。
+
+NEU 后续维护者回传已完成：最终同包开发窗口辅助与密码七步全部 pass，窗口结束时 offline，非正式 evidence。本次关闭 Clash 的环境说明及退出码未回传等证据边界已记录于[实施记录](../docs/research/wifi-bound-progress-2026-11-01.md)。NEU 单次窗口已结束，不重复运行；下一依赖为另行授权 NEU-2.4G 窗口。QR、正式新 Candidate 与 M3 状态不提升。本次仅更新执行记录与当前入口，不修改产品或网络配置。
+
+NEU-2.4G 后续已获单次授权并由维护者完成：同包八项辅助与密码七步全部 pass，启动器 exit 0，窗口结束时 offline；两种 SSID 的开发验证结果现已明确。环境及浏览器门户跳转仅作脱敏观察，见[实施记录](../docs/research/wifi-bound-progress-2026-11-01.md)。两个窗口均已结束，不重试或扩大授权；下一发布依赖为 QR 收敛，再统一新 Candidate 及正式验收。本次仅更新文档，未操作校园网络、提交或发布。
+
+2026-11-01 后续文档工作：维护者要求记录三网络手动试用及 ac_id 观察，并在开发更新时参考其他实现。已只读核对三个公开仓库并固定版本，结论及证据边界见[研究记录](../docs/research/ac-id-comparison-2026-11-01.md)，后续执行入口见[开发说明](../docs/operations/development.md#外部实现对照)。不改产品行为、不沿用真实授权；现有未提交修改与旧包保留。
+
+2026-11-01 QR 工作开始及离线交付：维护者批准网页契约优先的计划。已新增 [ADR-0027](../docs/architecture/decisions/ADR-0027-browser-qr-contract.md)、研究矩阵与浏览器窗口约定，给旧回执追加合成步骤解释修正，并增加精确两路径同摘要的假执行器回归。没有修改产品、正式 schema 或旧回执；缺失官方 QR 脚本/真实状态关系，暂不生成修复包。后续入口与检查报告见[QR 记录](../docs/research/qr-browser-contract-2026-11-01.md)。未校园导航、扫码、status/logout、提交或发布；旧包和现有未提交改动全部保留。
+
+2026-11-02 QR 后续：维护者在单次授权窗口完成无痕网页扫码、目标 online 核对、普通产品注销及最终 offline。已取得 login-qrcode.js 静态材料，发现无 ticket service 接续与当前 SDK ticket 要求的兼容差异；证据等级、历史失败不可唯一回溯及剩余接续材料见[QR 记录](../docs/research/qr-browser-contract-2026-11-01.md)。真实主动动作已结束，仅分析已有材料；不追加测试、不修改产品，正式 QR/M3 不提升。
+
+2026-11-02 后续离线执行：维护者批准 [ADR-0028](../docs/architecture/decisions/ADR-0028-qr-service-continuation.md) 完整工作包。已完成共享接续修复、独立普通产品 QR 开发入口、两端合成验收、快照/绑定包与零网络预检；结果、skip 和环境失败复核见[实施记录](../docs/research/qr-continuation-progress-2026-11-02.md)。当前本地 preflight blocked，尚无新包真实 QR 结果。下一依赖为维护者测试路径重新就绪及新单次授权，不沿用浏览器地址/代理路径，不重复旧包测试。既有未提交 Wi-Fi 改动、旧 Candidate/回执和缓存均保留；本轮未提交或发布。
+
+2026-11-02 窗口前门禁修正：维护者已授权并确认现场，但旧包零网络预检仍停止；只读定位为断开接口残留默认路由。按随后“请继续”完成 [ADR-0028 补充](../docs/architecture/decisions/ADR-0028-qr-service-continuation.md#断开接口残留默认路由修正)对应离线修复、两端回归、新包与本地 ready 预检。当前身份和私有终端步骤见[实施记录](../docs/research/qr-continuation-progress-2026-11-02.md#后续更新残留默认路由修复及当前可测试包)。没有改系统路由/代理或执行校园请求；下一步为维护者执行尚未开始的一次窗口，不沿用旧包启动器。旧 Candidate、历史回执和未提交改动保持。
+
+2026-11-02 当前 QR 窗口收尾：维护者回传 QR 命令及独立目标身份 online 核对 pass，注销阶段门禁 blocked，最终会话未知；哈希和 218 项快照核验通过，详细事实及门禁可观测性限制见[窗口结果](../docs/research/qr-continuation-progress-2026-11-02.md#最新窗口登录通过注销阶段门禁停止)。单次授权已消耗，下一步仅离线核对门禁原因，不自动 status/logout 或重试；不提升正式 QR/M3。旧包、回执及已有改动保留，本轮未修改产品、提交或发布。
+
+2026-11-02 门禁排查启动及收尾：按维护者“开始排查”仅进行本地只读快照比较、假命令复现及永久合成回归。原生 8 次查询稳定、假认证五步通过，两端重复回归/vet 和 Linux race 通过；未定位历史失败的具体项，未修改生产逻辑或真实会话。报告和待确认的首因诊断方案见[排查记录](../docs/research/qr-continuation-progress-2026-11-02.md#门禁排查未复现历史原因仍缺证据)。维护者报告账号仍在线；不复用已消耗的单次授权，不提交或发布。
+
+2026-11-02 首因定位工作启动：维护者已批准独立 QR 开发报告扩展；按 [ADR-0028](../docs/architecture/decisions/ADR-0028-qr-service-continuation.md) 补充连续实施、回归、打包及零网络检查。当前账号在线为维护者报告，不执行真实状态查询、扫码或注销；旧包及现有改动保留。
+
+2026-11-02 首因定位离线交付：按已批准 [ADR-0028](../docs/architecture/decisions/ADR-0028-qr-service-continuation.md) 补充完成实现、两端 QR/共享消费者回归、Linux race/fuzz、独立包绑定及零网络 ready 预检。当前入口、身份和历史限制见[交付](../docs/research/qr-continuation-progress-2026-11-02.md#当前交付门禁首因定位-v2)。普通产品字节未变，不修改旧包/回执；下一步仅为另行授权的真实私有窗口，需重新建立 offline。本轮未读取 profile、扫码、status/logout、提交或发布。
+
+2026-11-02 QR 开发窗口收尾：维护者回传首因定位 v2 包五步完整 pass、退出码 0，注销及最终 offline 均通过，无 cleanup 或门禁失败。Agent 仅保存脱敏回执、核验四项包哈希/225 项快照并用现有解码器严格读取；详见[闭环记录](../docs/research/qr-continuation-progress-2026-11-02.md#后续窗口qr-开发闭环通过)。单次授权已消耗；旧门禁失败原因仍未知，历史包/回执及所有未提交改动保留。下一步依赖为统一源码审阅及新 Candidate 准备，正式里程碑保持，未追加校园操作、提交或发布。
+
+2026-11-02 统一 Candidate 准备启动：维护者要求开始下一步；仅核验 Wi-Fi/QR 未提交源码、现有覆盖和发布依赖，准备审阅清单及提交检查点。沿用当前 roadmap，不修改历史交接，不提交/推送/合并，不构建正式 Candidate 或执行校园请求。
+
+2026-11-02 统一源码审阅收尾：两端干净快照集成/vet/doccheck、Linux race、发布工具合成门禁和脱敏检查已通过；既有产品跨平台与 config 管理员覆盖的源码一致性已核对，不重复无关安装。当前精确清单、差异、PR 草稿及下一授权边界见[准备记录](../docs/research/unified-candidate-preparation-2026-11-02.md)。拟从与当前 HEAD 同树的固定 main 创建新分支，保留全部未提交改动及排除缓存；尚未创建分支、暂存、提交、推送或构建正式 Candidate，没有校园请求。
+
+2026-11-02 已授权 Git 检查点执行：原 99 文件清单已创建新分支、提交和推送，PR #30 首轮 CI 为 12/13，通过及 Windows 合成夹具失败详情见[准备记录](../docs/research/unified-candidate-preparation-2026-11-02.md#后续pr-30-与-windows-合成夹具修正)。当前仅补齐离线测试隔离与拒绝分类，生产路径和预算保持；追加提交需新清单授权，不合并、不创建 Candidate 或执行校园操作。四个缓存文件与旧包/回执保留。
+
+2026-11-02 CI 追加修正离线收尾：Windows labpath 合成全包/vet/doccheck、Linux 同包/race/vet/doccheck 已通过，无测试级 skip；结果与剩余远端验证边界见[准备记录](../docs/research/unified-candidate-preparation-2026-11-02.md#后续pr-30-与-windows-合成夹具修正)。当前四文件补充清单包含一份 Windows 测试和三份执行文档，尚未提交/推送；待精确清单授权后更新 PR #30 并复核 CI，不重跑校园窗口。

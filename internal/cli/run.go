@@ -103,8 +103,12 @@ func (r commandRuntime) runMeta(ctx context.Context, args []string) int {
 		if len(args) == 2 && args[1] == "list" {
 			return r.runNetworkList(ctx)
 		}
-		if len(args) == 2 && args[1] == "scan" {
-			return r.runNetworkScan(ctx)
+		if len(args) >= 2 && args[1] == "scan" {
+			scope, err := parseScanScope(args[2:])
+			if err != nil {
+				return r.render.failure("network.scan", invalidArgument(err))
+			}
+			return r.runNetworkScanScope(ctx, scope)
 		}
 		return r.render.failure("network", invalidArgument(fmt.Errorf("usage: ipgw-meta network <list|scan>")))
 	case "profile":
@@ -166,7 +170,7 @@ func normalizeMetaLoginArgs(args []string) ([]string, error) {
 func (r commandRuntime) printMetaCommandHelp() {
 	_, _ = fmt.Fprintln(r.render.out, "Usage: ipgw-meta [--json|--output human|json] [--profile NAME] [--bind-ip IP] [--version] <status|login|logout|network|profile>")
 	_, _ = fmt.Fprintln(r.render.out, "  login [--method password|qr] [--switch]")
-	_, _ = fmt.Fprintln(r.render.out, "  network <list|scan>")
+	_, _ = fmt.Fprintln(r.render.out, "  network list | network scan [--scope all|bound]")
 	_, _ = fmt.Fprintln(r.render.out, "  profile <list|show|add|remove|migrate>")
 }
 

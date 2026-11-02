@@ -21,7 +21,7 @@ func TestWiFiRefusesAmbiguousScopeAndNeverAuthenticates(t *testing.T) {
 		scans                           int
 		last                            string
 	}{
-		{name: "complete", scans: 1, last: "topology_unchanged"}, {name: "multiple", multi: true, last: "selected_address_unique"}, {name: "changed_list", drift: true, last: "scan_scope_valid"}, {name: "nested_error", scanError: true, scans: 1, last: "scan_complete"}, {name: "already_online", online: true, last: "selected_wifi_topology"},
+		{name: "complete", scans: 1, last: "topology_unchanged"}, {name: "multiple", multi: true, scans: 1, last: "topology_unchanged"}, {name: "changed_list", drift: true, last: "scan_scope_valid"}, {name: "nested_error", scanError: true, scans: 1, last: "scan_complete"}, {name: "already_online", online: true, last: "selected_wifi_topology"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			lists, scans := 0, 0
@@ -38,7 +38,10 @@ func TestWiFiRefusesAmbiguousScopeAndNeverAuthenticates(t *testing.T) {
 				return livegate.Observation{Session: session}
 			}, list: func(context.Context) ([]netip.Addr, error) {
 				lists++
-				if tc.multi || tc.drift && lists == 2 {
+				if tc.drift && lists == 2 {
+					return []netip.Addr{netip.MustParseAddr("192.0.2.12")}, nil
+				}
+				if tc.multi {
 					return []netip.Addr{ip, netip.MustParseAddr("192.0.2.12")}, nil
 				}
 				return []netip.Addr{ip}, nil

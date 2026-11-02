@@ -36,6 +36,7 @@ type ProcessExecutor struct {
 	// Optional development execution context. Zero values preserve the formal
 	// runner's existing command line and inherited environment.
 	BindIP        netip.Addr
+	NetworkIndex  int
 	Environment   []string
 	RequireRefuse bool
 	// ProcessAdapter is only set by the independent development launcher. It

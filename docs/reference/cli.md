@@ -35,6 +35,8 @@ ipgw-meta
 
 后续 1.x 才加入 `session` 与 `account`。`network list` 只枚举本地 UP、非 loopback IPv4；`network scan` 才对候选地址组合调用 status。
 
+`network scan --scope all|bound` 默认 all，保持枚举全部地址后逐项 status 的行为。bound 要求命令中显式有效的 `--bind-ip IPv4`，不能从 profile 补齐；枚举必须恰有一个匹配项，随后仅探测该项。缺失、无匹配、重复匹配、非法 scope 在请求前返回现有 invalid_argument，取消沿用取消分类；不回退到 all。全局 --bind-ip 本身不缩小扫描范围。产品 JSON 仍使用现有 results 数组。
+
 现代入口接受以下全局参数：
 
 | 参数 | 含义 |

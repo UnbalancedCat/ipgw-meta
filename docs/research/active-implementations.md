@@ -8,6 +8,10 @@ snapshot_date: 2026-08-27
 
 本页只记录可复核的协议线索与风险，不把第三方实现当作规范。运行时不依赖这些仓库；更新结论时必须记录新的固定提交和日期。
 
+2026-11-01 QR 扩展：已定位 neucn/neust、CreamPig233/neu_wisedu2wakeup、RekaYOO/NEU-JWXT-Toolkit 的实际微信 QR 代码。固定提交、目标服务差异及不能采纳的宽松判据见[QR 核对](qr-browser-contract-2026-11-01.md)；不再把最初三个密码项目的检索结论泛化为“其他项目都没有 QR”。
+
+2026-11-01 补充：[三网络手动测试与 ac_id 对照](ac-id-comparison-2026-11-01.md)记录有线/NEU/NEU-2.4G 的维护者反馈、浏览器 1/15/15 观察，以及 neucn/ipgw、Neboer/ipgw-py-manager、7aaauTools/neu-login 的完整固定提交和源码差异。下方历史表格与日期保持；后续按[开发说明](../operations/development.md#外部实现对照)进行相关更新对照。
+
 2026-10-29 补充：已完成 [P1 本地旧版/v1 行为对照](auth-baseline-2026-10-29.md)。当前本地 v0.1.3 解析为 `5ad8c1fa05102fbcb249e7195f4801563b3d44a5`；下表历史 `3721fd6` 引用保留，但两处本地仓库均无法读取该旧对象，不能据 tag 名称宣称 tree 映射已验证。研究优先级见[当前 roadmap](../upgrade/plan.md#roadmap-20261029)，本页旧快照不作为当前实际页面或认证成功证据。
 
 2026-10-30 补充：[P3 提交上下文离线核对](cas-submit-context-2026-10-30.md)记录真实 POST 500 后的源码检查、合成会话/表单覆盖与仍缺少的关系证据；未改变产品选键或取得真实成功。

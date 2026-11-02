@@ -121,6 +121,7 @@ type liveGateInvocation struct {
 	profile           string
 	outputDir         string
 	bindIP            netip.Addr
+	wifiSSID          *string
 }
 
 // Execute runs the closed maintainer-only live gate. It never renders caller,
@@ -129,7 +130,7 @@ func Execute(ctx context.Context, options Options) GateExitCode {
 	if ctx == nil {
 		return renderGateExit(options, GateExitInternal, "", "")
 	}
-	if len(options.Args) > 0 && options.Args[0] == "audit-v1" {
+	if len(options.Args) > 0 && (options.Args[0] == "audit-v1" || options.Args[0] == "audit-v2" || options.Args[0] == "audit-aux-v1") {
 		return executeHistory(ctx, options)
 	}
 	if len(options.Args) > 0 && options.Args[0] == "summarize" {
@@ -277,7 +278,7 @@ func Execute(ctx context.Context, options Options) GateExitCode {
 }
 
 func parseLiveGateInvocation(args []string) (liveGateInvocation, bool) {
-	if (len(args) != 17 && len(args) != 19) || args[0] != "run" {
+	if (len(args) != 17 && len(args) != 19 && len(args) != 21) || args[0] != "run" {
 		return liveGateInvocation{}, false
 	}
 	values := make(map[string]string, 8)
@@ -285,7 +286,7 @@ func parseLiveGateInvocation(args []string) (liveGateInvocation, bool) {
 		name, value := args[index], args[index+1]
 		switch name {
 		case "--candidate", "--candidate-sha256", "--candidate-manifest",
-			"--suite", "--testbed", "--network", "--profile", "--output-dir", "--bind-ip":
+			"--suite", "--testbed", "--network", "--profile", "--output-dir", "--bind-ip", "--wifi-ssid":
 		default:
 			return liveGateInvocation{}, false
 		}
@@ -297,7 +298,7 @@ func parseLiveGateInvocation(args []string) (liveGateInvocation, bool) {
 		}
 		values[name] = value
 	}
-	if len(values) != 8 && len(values) != 9 {
+	if len(values) < 8 || len(values) > 10 {
 		return liveGateInvocation{}, false
 	}
 
@@ -323,6 +324,12 @@ func parseLiveGateInvocation(args []string) (liveGateInvocation, bool) {
 		invocation.bindIP = ip
 	}
 	if invocation.testbed == TestbedBHKWindows && !usableBindIP(invocation.bindIP) {
+		return liveGateInvocation{}, false
+	}
+	if ssid, exists := values["--wifi-ssid"]; exists {
+		invocation.wifiSSID = &ssid
+	}
+	if !validWiFiIdentity(invocation.network == NetworkCampusWiFi, invocation.wifiSSID) {
 		return liveGateInvocation{}, false
 	}
 	return invocation, true
@@ -494,6 +501,7 @@ func buildLiveGateEvidence(
 		StartedAt:          Timestamp(started.Format(time.RFC3339Nano)),
 		FinishedAt:         Timestamp(finished.Format(time.RFC3339Nano)),
 		Steps:              append([]Step(nil), steps...),
+		WiFiSSID:           invocation.wifiSSID,
 	}
 }
 

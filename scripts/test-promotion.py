@@ -377,18 +377,18 @@ class Fixture:
             ],
         ]
         subjects.sort(key=lambda item: item["name"])
-        evidence_ids = [f"EVID-20260830-{index:03d}" for index in range(1, 4)]
+        evidence_ids = [f"EVID-20260830-{index:03d}" for index in range(1, 5)]
         self.evidence_directory = self.repository / "docs" / "evidence" / "releases" / P.VERSION
         self.evidence_directory.mkdir(parents=True)
-        for evidence_id, values in zip(evidence_ids, sorted({("windows-amd64", "bhk_windows", "campus_wired", "password", "password_core"), ("windows-amd64", "bhk_windows", "campus_wifi", "password", "password_core"), ("windows-amd64", "bhk_windows", "campus_wired", "terminal_qr", "terminal_qr")}), strict=True):
-            platform, testbed, network_type, auth_method, suite = values
+        for evidence_id, values in zip(evidence_ids, sorted(P.REQUIRED_EVIDENCE_TUPLES), strict=True):
+            platform, testbed, network_type, auth_method, suite, wifi_ssid = values
             before, after = (
                 (P.PASSWORD_BEFORE, P.PASSWORD_AFTER)
                 if suite == "password_core"
                 else (P.QR_BEFORE, P.QR_AFTER)
             )
             fields = {
-                "schema_version": 2,
+                "schema_version": 3,
                 "plan_id": P.PLAN_ID,
                 "revision": P.REVISION,
                 "evidence_id": evidence_id,
@@ -407,13 +407,14 @@ class Fixture:
                 "started_at": "2026-08-30T00:00:00Z",
                 "finished_at": "2026-08-30T00:01:00Z",
                 "bundle_sha256": hashlib.sha256(evidence_id.encode("ascii")).hexdigest(),
+                "wifi_ssid": wifi_ssid,
             }
             summary = {key: fields[key] for key in P.EVIDENCE_KEYS}
             write_file(self.evidence_directory / f"{evidence_id}.json", P.canonical_bytes(summary))
         self.notes = self.evidence_directory / "release-notes.md"
         write_file(self.notes, P.RELEASE_NOTES)
         self.lock_value = {
-            "schema_version": 2,
+            "schema_version": 3,
             "plan_id": P.PLAN_ID,
             "revision": P.REVISION,
             "version": P.VERSION,
@@ -439,13 +440,15 @@ class Fixture:
             "release_notes_sha256": hashlib.sha256(P.RELEASE_NOTES).hexdigest(),
         }
 
+        self.lock_value["wifi_summaries"] = {}
         for index, (reference, kind, checks) in enumerate([
             ("installation_summary", "bhk_windows_native_install", ["candidate_verified","fresh_install","three_entry_versions","active_junction_execution","fresh_default_meta","upgrade_preserves_launcher","basic_rollback","private_layout","real_user_path_unchanged","candidate_unchanged"]),
-            ("wifi_summary", "bhk_wifi_network", ["candidate_verified","selected_wifi_topology","list_complete","selected_address_unique","bound_status_valid","scan_scope_valid","scan_complete","selected_result_valid","topology_unchanged","candidate_unchanged"]),
+            ("neu", "bhk_wifi_network", P.WIFI_CHECKS),
+            ("neu_24g", "bhk_wifi_network", P.WIFI_CHECKS),
         ], 1):
             summary_id = f"AUX-20260830-{index:03d}"
             auxiliary = {
-                "schema_version": 1, "plan_id": P.PLAN_ID, "revision": P.REVISION,
+                "schema_version": 2, "plan_id": P.PLAN_ID, "revision": P.REVISION,
                 "summary_id": summary_id, "kind": kind, "candidate_id": self.candidate_id,
                 "candidate_set_sha256": self.candidate_set_sha256, "source_commit": self.source_commit,
                 "build_input_sha256": self.build_input,
@@ -454,11 +457,17 @@ class Fixture:
                 "started_at": "2026-08-30T00:00:00Z", "finished_at": "2026-08-30T00:01:00Z",
                 "checks": [{"name": name, "result": "pass"} for name in checks],
                 "verifier": {"source_tree": self.source_tree, "snapshot_sha256": "a"*64, "go_version": "go1.25.0 windows/amd64", "test_binary_sha256": "b"*64} if index == 1 else None,
+                "wifi_ssid": reference if index != 1 else None,
                 "bundle_sha256": "c"*64,
             }
             raw = P.canonical_bytes(auxiliary)
             write_file(self.evidence_directory / f"{summary_id}.json", raw)
-            self.lock_value[reference] = {"summary_id": summary_id, "sha256": hashlib.sha256(raw).hexdigest()}
+            ref = {"summary_id": summary_id, "sha256": hashlib.sha256(raw).hexdigest()}
+            if index == 1:
+                self.lock_value[reference] = ref
+            else:
+                self.lock_value["wifi_summaries"][reference] = ref
+        self.lock_value = {k: self.lock_value[k] for k in P.LOCK_KEYS}
         self.lock = self.evidence_directory / "promotion-lock.json"
         write_file(self.lock, P.canonical_bytes(self.lock_value))
         run_git(self.repository, "add", "--", "docs/evidence/releases/v1.0.0")
@@ -586,7 +595,7 @@ class PromotionVerifierTests(unittest.TestCase):
             action()
 
 
-    def test_v2_matrix_and_auxiliary_negative_cases(self) -> None:
+    def test_v3_matrix_and_auxiliary_negative_cases(self) -> None:
         fixture = self.fixture
         original = {p: p.read_bytes() for p in fixture.evidence_directory.glob("*.json")}
         def restore():
@@ -600,11 +609,12 @@ class PromotionVerifierTests(unittest.TestCase):
             v = json.loads(original[qr]); v[field] = value
             write_file(qr, P.canonical_bytes(v))
             self.assert_rejected(lambda: P.validate_candidate_root(fixture.candidate, fixture.lock_value, fixture.repository))
-        for ref_name in ("installation_summary", "wifi_summary"):
+        for ref_name in ("installation_summary", "neu", "neu_24g"):
             for mutation in ("missing", "tampered", "wrong_type", "wrong_candidate", "failed", "skip", "omitted", "extra", "runner"):
                 restore()
                 lock = json.loads(original[fixture.lock])
-                path = fixture.evidence_directory / (lock[ref_name]["summary_id"] + ".json")
+                ref = lock[ref_name] if ref_name == "installation_summary" else lock["wifi_summaries"][ref_name]
+                path = fixture.evidence_directory / (ref["summary_id"] + ".json")
                 if mutation == "missing":
                     path.unlink()
                 elif mutation == "tampered":
@@ -619,7 +629,7 @@ class PromotionVerifierTests(unittest.TestCase):
                     if mutation == "extra": v["checks"].append(v["checks"][0])
                     if mutation == "runner": v["runner_sha256"] = "e"*64
                     raw = P.canonical_bytes(v); write_file(path, raw)
-                    lock[ref_name]["sha256"] = hashlib.sha256(raw).hexdigest()
+                    ref["sha256"] = hashlib.sha256(raw).hexdigest()
                 self.assert_rejected(lambda: P.validate_candidate_root(fixture.candidate, lock, fixture.repository))
         restore()
         for ids in (fixture.lock_value["evidence_ids"][:2], [fixture.lock_value["evidence_ids"][0]]*3, fixture.lock_value["evidence_ids"]+["EVID-20260830-004"]):
@@ -650,6 +660,65 @@ class PromotionVerifierTests(unittest.TestCase):
         qr=f.evidence_directory/(lock["evidence_ids"][1]+".json")
         v=json.loads(qr.read_bytes());v["platform"]="windows-amd64";v["testbed"]="bhk_windows";write_file(qr,P.canonical_bytes(v))
         self.assert_rejected(lambda:P.audit_history(f.lock,f.notes))
+
+    def test_historical_v2_preserves_matrix_and_auxiliary_without_ssid(self) -> None:
+        f = self.fixture
+        current = f.lock_value
+        lock = {k: current[k] for k in P.HISTORICAL_LOCK_KEYS}
+        lock.update(schema_version=2, installation_summary=current["installation_summary"],
+                    wifi_summary=current["wifi_summaries"]["neu"])
+        lock["evidence_ids"] = current["evidence_ids"][:3]
+        template = json.loads((f.evidence_directory / (current["evidence_ids"][0]+".json")).read_bytes())
+        for eid, values in zip(lock["evidence_ids"], sorted(P.V2_EVIDENCE_TUPLES), strict=True):
+            v = {k: template[k] for k in P.V2_EVIDENCE_KEYS}
+            v.update(schema_version=2, evidence_id=eid)
+            for k, value in zip(("platform", "testbed", "network_type", "auth_method", "suite"), values, strict=True):
+                v[k] = value
+            v["capability_before"], v["capability_after"] = (P.PASSWORD_BEFORE, P.PASSWORD_AFTER) if v["suite"] == "password_core" else (P.QR_BEFORE, P.QR_AFTER)
+            write_file(f.evidence_directory/(eid+".json"), P.canonical_bytes(v))
+        for key in ("installation_summary", "wifi_summary"):
+            ref = lock[key]
+            path = f.evidence_directory/(ref["summary_id"]+".json")
+            value = json.loads(path.read_bytes())
+            value = {k: value[k] for k in P.V1_AUXILIARY_KEYS}
+            value["schema_version"] = 1
+            raw = P.canonical_bytes(value)
+            write_file(path, raw)
+            ref["sha256"] = hashlib.sha256(raw).hexdigest()
+        lock["release_notes_sha256"] = hashlib.sha256(P.V2_RELEASE_NOTES).hexdigest()
+        write_file(f.lock, P.canonical_bytes(lock)); write_file(f.notes, P.V2_RELEASE_NOTES)
+        before = {p: p.read_bytes() for p in f.evidence_directory.iterdir()}
+        P.audit_history(f.lock, f.notes, 2)
+        self.assertEqual(before, {p: p.read_bytes() for p in before})
+        self.assert_rejected(lambda: P.validate_lock_shape(lock))
+        self.assert_rejected(lambda: P.audit_history(f.lock, f.notes))
+
+    def test_dual_ssid_identity_cannot_be_substituted(self) -> None:
+        f = self.fixture
+        original = {p: p.read_bytes() for p in f.evidence_directory.glob("*.json")}
+        wifi = next(p for p, raw in original.items() if p.name.startswith("EVID-") and json.loads(raw)["wifi_ssid"] == "neu_24g")
+        for ssid in (None, "neu", "neu_mobile", "other"):
+            value = json.loads(original[wifi]); value["wifi_ssid"] = ssid
+            write_file(wifi, P.canonical_bytes(value))
+            self.assert_rejected(lambda: P.validate_evidence(f.evidence_directory, f.lock_value))
+        write_file(wifi, original[wifi])
+        for mutation in ("duplicate", "missing", "wrong_ssid", "old_version"):
+            lock = json.loads(original[f.lock])
+            if mutation == "duplicate":
+                lock["wifi_summaries"]["neu_24g"] = lock["wifi_summaries"]["neu"]
+                self.assert_rejected(lambda: P.validate_lock_shape(lock))
+            elif mutation == "missing":
+                del lock["wifi_summaries"]["neu_24g"]
+                self.assert_rejected(lambda: P.validate_lock_shape(lock))
+            else:
+                ref = lock["wifi_summaries"]["neu_24g"]
+                path = f.evidence_directory/(ref["summary_id"]+".json")
+                value = json.loads(original[path])
+                if mutation == "wrong_ssid": value["wifi_ssid"] = "neu"
+                else: value["schema_version"] = 1
+                raw = P.canonical_bytes(value); write_file(path, raw)
+                ref["sha256"] = hashlib.sha256(raw).hexdigest()
+                self.assert_rejected(lambda: P.validate_auxiliary(f.evidence_directory, lock))
 
     def test_release_notes_match_current_specification(self) -> None:
         document = (SCRIPT.parent.parent / "docs/operations/release.md").read_text(encoding="utf-8")
@@ -703,8 +772,8 @@ class PromotionVerifierTests(unittest.TestCase):
         fixture = self.fixture
         raw = fixture.lock.read_bytes()
         duplicate = raw.replace(
-            b'{"schema_version":2,',
-            b'{"schema_version":2,"schema_version":2,',
+            b'{"schema_version":3,',
+            b'{"schema_version":3,"schema_version":3,',
             1,
         )
         duplicate_path = fixture.root / "duplicate-lock.json"
@@ -729,7 +798,7 @@ class PromotionVerifierTests(unittest.TestCase):
         first = json.loads((fixture.evidence_directory / f"{first_id}.json").read_bytes())
         second_path = fixture.evidence_directory / f"{second_id}.json"
         second = json.loads(second_path.read_bytes())
-        for key in ("platform", "testbed", "network_type", "auth_method", "suite", "capability_before", "capability_after"):
+        for key in ("platform", "testbed", "network_type", "auth_method", "suite", "capability_before", "capability_after", "wifi_ssid"):
             second[key] = first[key]
         write_file(second_path, P.canonical_bytes({key: second[key] for key in P.EVIDENCE_KEYS}))
         self.assert_rejected(lambda: P.validate_evidence(fixture.evidence_directory, lock))

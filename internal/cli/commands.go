@@ -189,10 +189,18 @@ type scanResult struct {
 }
 
 func (r commandRuntime) runNetworkScan(ctx context.Context) int {
+	return r.runNetworkScanScope(ctx, "all")
+}
+
+func (r commandRuntime) runNetworkScanScope(ctx context.Context, scope string) int {
 	if err := ctx.Err(); err != nil {
 		return r.render.failure("network.scan", err)
 	}
 	interfaces, err := r.gateway.ListInterfaces(ctx)
+	if err != nil {
+		return r.render.failure("network.scan", err)
+	}
+	interfaces, err = selectScanInterfaces(ctx, scope, r.bindIP, interfaces)
 	if err != nil {
 		return r.render.failure("network.scan", err)
 	}

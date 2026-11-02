@@ -87,7 +87,11 @@ func (e Evidence) MarshalJSON() ([]byte, error) {
 	if err := e.Validate(); err != nil {
 		return nil, err
 	}
-	return json.Marshal(evidenceWire(e))
+	raw, err := json.Marshal(evidenceWire(e))
+	if err == nil && e.SchemaVersion == 3 && e.WiFiSSID == nil {
+		raw = append(raw[:len(raw)-1], []byte(`,"wifi_ssid":null}`)...)
+	}
+	return raw, err
 }
 
 func (e *Evidence) UnmarshalJSON(raw []byte) error {
@@ -215,10 +219,13 @@ func validateWireFields(raw []byte) error {
 		return ErrInvalidEvidenceJSON
 	}
 	fields := append([]string(nil), evidenceFields[:]...)
-	if version == SchemaVersion {
+	if version == SchemaVersion || version == 2 {
 		fields = append(fields, "runner_sha256")
 	} else if version != HistoricalSchemaVersion {
 		return ErrInvalidEvidenceJSON
+	}
+	if version == 3 {
+		fields = append(fields, "wifi_ssid")
 	}
 	if !hasExactFields(object, fields) {
 		return ErrInvalidEvidenceJSON

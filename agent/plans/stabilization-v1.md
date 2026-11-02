@@ -12,6 +12,14 @@ derived: true
 
 ## 2026-10-29 当前工作包入口
 
+2026-11-02 最新入口：`WP-AUTH-CANDIDATE-ACCEPTANCE` 的统一源码准备，依赖与检查点引用[准备记录](../../docs/research/unified-candidate-preparation-2026-11-02.md)。QR 与双 Wi-Fi 开发结果已明确；当前只交付清单/差异/PR 草稿，不执行后续 Git 或正式构建。以下是此前工作包顺序。
+
+2026-11-02 QR 后续入口以 [ADR-0028](../../docs/architecture/decisions/ADR-0028-qr-service-continuation.md) 和 [PROTO-QR-CONTINUATION-001](../../docs/architecture/protocol-correctness.md#proto-qr-continuation-001无-ticket-接续) 为准：离线修复/绑定包 → 新单次授权的私有终端 QR 开发验证 → QR 收敛后统一 Candidate。验收入口为 `python scripts/dev.py qr-dev --context tool`（Linux 使用 python3），交付与限制见[实施记录](../../docs/research/qr-continuation-progress-2026-11-02.md)。下段保留此前网页证据工作包，不重复请求材料。
+
+2026-11-01 QR 下一执行入口为 [ADR-0027](../../docs/architecture/decisions/ADR-0027-browser-qr-contract.md)：本地/外部源码及历史解释核对 → 单独授权的无痕网页对照 → 有依据的最小修复及独立开发验证 → 统一新 Candidate。材料缺口见[研究记录](../../docs/research/qr-browser-contract-2026-11-01.md)，真实窗口边界只引用[浏览器约定](../../docs/operations/browser-comparison.md#browser-qr-comparison)，不沿用旧 QR/Wi-Fi 授权。
+
+2026-11-01 当前依赖增量为 [ADR-0026](../../docs/architecture/decisions/ADR-0026-bound-scan-dual-wifi.md)：离线实现/双 SSID 开发包及两个已单独授权的开发窗口均已交付结果 → QR 收敛 → 新统一 Candidate 与完整正式验收。命令入口 `python scripts/dev.py wifi-dev --context tool`、`p4`、`quality`、`cross`；具体行为不在 agent 复制，通过结果与检查限制见 [实施记录](../../docs/research/wifi-bound-progress-2026-11-01.md)。
+
 2026-10-31 P4-A–P4-F 已完成离线交付；验收及环境未覆盖项见 [交付记录](../../docs/research/p4-bhk-gates-2026-10-31.md)。契约及各层边界引用 [ADR-0025](../../docs/architecture/decisions/ADR-0025-bhk-formal-acceptance.md) 和 [BHK 正式验收](../../docs/operations/bhk-acceptance.md)，状态见 [status](../../docs/upgrade/status.md#status-20261031-p4)。下一依赖入口为 P5，不授权正式或真实操作。
 
 阶段定义、退出条件与规则切换以[当前 roadmap](../../docs/upgrade/plan.md#roadmap-20261029)为准，状态以[当前摘要](../../docs/upgrade/status.md#status-20261029)为准。以下只索引依赖、修改边界和验收入口，不复制产品契约。
@@ -106,3 +114,7 @@ go run ./cmd/doccheck --check
 | P4-E | P4-B、P4-C、P4-D | Wi-Fi 辅助、两摘要、[REL-BHK-PROMOTION-002](../../docs/operations/bhk-acceptance.md) | promotion 合成端到端、scope/身份负面测试 |
 | P4-F | P4-B–P4-E | 集成、平台依赖隔离、交接 | test/race/vet/quality/cross/docs；定向扫描 |
 | P5 进入准备 | P4-F、WP-AUTH-MINIMAL-FIX | 仅交接缺口和执行入口 | 新 Candidate/真实窗口/提交发布另行授权 |
+
+2026-11-02 QR 门禁首因定位已离线交付，当前开发入口和后续依赖见[实施记录](../../docs/research/qr-continuation-progress-2026-11-02.md#当前交付门禁首因定位-v2)。验收入口沿用 `python scripts/dev.py qr-dev --context tool`；不复用旧真实授权，不提前更新正式里程碑。
+
+2026-11-02 后续：QR 开发五步闭环回执已核验通过，见[结果](../../docs/research/qr-continuation-progress-2026-11-02.md#后续窗口qr-开发闭环通过)。`WP-AUTH-CANDIDATE-ACCEPTANCE` 下一进入准备依赖为统一 Wi-Fi/QR 源码及覆盖缺口审阅，执行边界沿用[当前 roadmap](../../docs/upgrade/plan.md#roadmap-20261029)。不重复已完成开发窗口，不将开发回执作为正式证据；旧门禁原因未知继续保留。
