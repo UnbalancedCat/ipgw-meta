@@ -7,6 +7,18 @@ import (
 	"testing"
 )
 
+func publishTestDirectoryInfo(t *testing.T, name string) os.FileInfo {
+	t.Helper()
+	// Match Assemble's handle-derived identity. On Windows, Lstat may defer
+	// loading the file ID until SameFile, after this path has been replaced.
+	directory, err := openDirectorySnapshot(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer directory.close()
+	return directory.info
+}
+
 func TestPublishCandidateDirectoryDoesNotReplaceRacingDirectory(t *testing.T) {
 	parent := t.TempDir()
 	stage := filepath.Join(parent, "stage")
@@ -20,10 +32,7 @@ func TestPublishCandidateDirectoryDoesNotReplaceRacingDirectory(t *testing.T) {
 	if err := os.Mkdir(final, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	stageInfo, err := os.Lstat(stage)
-	if err != nil {
-		t.Fatal(err)
-	}
+	stageInfo := publishTestDirectoryInfo(t, stage)
 	if err := publishCandidateDirectory(stage, final, stageInfo, nil, nil, nil); err == nil {
 		t.Fatal("publish replaced a racing destination")
 	}
@@ -44,11 +53,8 @@ func TestPublishCandidateDirectoryMovesOnlyToAbsentSibling(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeTestFile(t, stage, "sentinel", []byte("stage\n"), 0o644)
-	stageInfo, err := os.Lstat(stage)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = publishCandidateDirectory(stage, final, stageInfo, nil, nil, nil)
+	stageInfo := publishTestDirectoryInfo(t, stage)
+	err := publishCandidateDirectory(stage, final, stageInfo, nil, nil, nil)
 	if runtime.GOOS != "linux" && runtime.GOOS != "windows" && runtime.GOOS != "darwin" {
 		if err == nil {
 			t.Fatal("unsupported platform published instead of failing closed")
@@ -75,10 +81,7 @@ func TestPublishCandidateDirectoryRejectsReplacedStageIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeTestFile(t, stage, "sentinel", []byte("verified\n"), 0o644)
-	stageInfo, err := os.Lstat(stage)
-	if err != nil {
-		t.Fatal(err)
-	}
+	stageInfo := publishTestDirectoryInfo(t, stage)
 	if err := os.Rename(stage, displaced); err != nil {
 		t.Fatal(err)
 	}
@@ -86,6 +89,19 @@ func TestPublishCandidateDirectoryRejectsReplacedStageIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeTestFile(t, stage, "sentinel", []byte("replacement\n"), 0o644)
+	// Equal timestamps must not hide a replaced directory. The original still
+	// exists at displaced, so file-ID reuse cannot explain an identity match.
+	if err := os.Chtimes(stage, stageInfo.ModTime(), stageInfo.ModTime()); err != nil {
+		t.Fatal(err)
+	}
+	replacementInfo := publishTestDirectoryInfo(t, stage)
+	if stageInfo.Mode() != replacementInfo.Mode() || stageInfo.Size() != replacementInfo.Size() ||
+		!stageInfo.ModTime().Equal(replacementInfo.ModTime()) {
+		t.Fatal("replacement fixture must preserve basic metadata")
+	}
+	if !os.SameFile(stageInfo, publishTestDirectoryInfo(t, displaced)) || os.SameFile(stageInfo, replacementInfo) {
+		t.Fatal("snapshot must identify the displaced original, not its replacement")
+	}
 	if err := publishCandidateDirectory(stage, final, stageInfo, nil, nil, nil); err == nil {
 		t.Fatal("publish accepted a replacement stage inode")
 	}

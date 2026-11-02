@@ -1127,3 +1127,5 @@ NEU-2.4G 后续已获单次授权并由维护者完成：同包八项辅助与�
 2026-11-02 已授权 Git 检查点执行：原 99 文件清单已创建新分支、提交和推送，PR #30 首轮 CI 为 12/13，通过及 Windows 合成夹具失败详情见[准备记录](../docs/research/unified-candidate-preparation-2026-11-02.md#后续pr-30-与-windows-合成夹具修正)。当前仅补齐离线测试隔离与拒绝分类，生产路径和预算保持；追加提交需新清单授权，不合并、不创建 Candidate 或执行校园操作。四个缓存文件与旧包/回执保留。
 
 2026-11-02 CI 追加修正离线收尾：Windows labpath 合成全包/vet/doccheck、Linux 同包/race/vet/doccheck 已通过，无测试级 skip；结果与剩余远端验证边界见[准备记录](../docs/research/unified-candidate-preparation-2026-11-02.md#后续pr-30-与-windows-合成夹具修正)。当前四文件补充清单包含一份 Windows 测试和三份执行文档，尚未提交/推送；待精确清单授权后更新 PR #30 并复核 CI，不重跑校园窗口。
+
+2026-11-02 签名替代执行及 main 失败调查：已授权 PR #31 签名替代、CI、标准合并及关闭旧 PR #30 完成，分支和历史保留。合并后新 Windows 测试失败及本地修正依据见[准备记录](../docs/research/unified-candidate-preparation-2026-11-02.md#后续签名替代合并及-main-身份测试失败)。当前执行身份仍为原本地分支，未强制切换；仅补齐测试回归和新的审阅清单，不自动追加提交、Candidate 或校园操作。正式状态以 status 为准。
