@@ -117,6 +117,52 @@ func TestEvidenceInstanceReferencesAreNotDocumentationDeclarations(t *testing.T)
 	}
 }
 
+func TestPromotionReleaseNotes(t *testing.T) {
+	manual, err := os.ReadFile("../../docs/operations/release.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The promotion verifier's own regression compares this same specification
+	// block with the bytes it requires from the release artifact.
+	const title = "# IPGW-Meta v1.0.0\n"
+	_, rest, ok := strings.Cut(string(manual), "```text\n"+title)
+	if !ok {
+		t.Fatal("missing canonical release notes in specification")
+	}
+	body, _, ok := strings.Cut(rest, "\n```")
+	if !ok {
+		t.Fatal("unterminated release notes in specification")
+	}
+	exact := title + body + "\n"
+	const notes = "docs/evidence/releases/v1.0.0/release-notes.md"
+	for _, tc := range []struct{ name, path, body, want string }{
+		{"canonical", notes, exact, ""},
+		{"header", notes, testFrontMatter + exact, "v1.0.0 canonical release notes mismatch"},
+		{"extra_text", notes, exact + "extra\n", "v1.0.0 canonical release notes mismatch"},
+		{"missing_lf", notes, strings.TrimSuffix(exact, "\n"), "v1.0.0 canonical release notes mismatch"},
+		{"crlf", notes, strings.ReplaceAll(exact, "\n", "\r\n"), "v1.0.0 canonical release notes mismatch"},
+		{"neighbor", "docs/evidence/releases/v1.0.0/other.md", exact, "front matter plan_id must be " + PlanID},
+		{"other_version", "docs/evidence/releases/v1.0.1/release-notes.md", exact, "front matter plan_id must be " + PlanID},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := seedRepository(t)
+			if _, v, err := Generate(root); err != nil || len(v) > 0 {
+				t.Fatalf("fixture: %v %v", v, err)
+			}
+			writeFile(t, root, tc.path, tc.body)
+			v, err := Check(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.want != "" {
+				requireViolation(t, v, tc.want)
+			} else if len(v) > 0 {
+				t.Fatal(v)
+			}
+		})
+	}
+}
+
 func TestValidationFailures(t *testing.T) {
 	tests := []struct {
 		name string

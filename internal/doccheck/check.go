@@ -4,6 +4,7 @@ package doccheck
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"io/fs"
 	"net/url"
@@ -20,6 +21,10 @@ const (
 	PlanID    = "IPGW-META-V1"
 	Revision  = "2026-08-28-r2"
 	IndexPath = "docs/stable-ids.md"
+
+	releaseNotesV1Path = "docs/evidence/releases/v1.0.0/release-notes.md"
+	// Digest of the literal release notes specified in docs/operations/release.md.
+	releaseNotesV1SHA256 = "84065ec302f9a113b6f29a14961e0dca551dbcb402ba2380d3bd3a6e0f680696"
 )
 
 var requiredPaths = []string{
@@ -253,7 +258,11 @@ func analyze(root string, allowMissingIndex bool) (*analysis, error) {
 
 	for _, path := range sortedDocumentPaths(result.documents) {
 		doc := result.documents[path]
-		if strings.HasPrefix(path, "docs/") || strings.HasPrefix(path, "agent/") {
+		if path == releaseNotesV1Path {
+			if fmt.Sprintf("%x", sha256.Sum256([]byte(doc.body))) != releaseNotesV1SHA256 {
+				result.violations = append(result.violations, Violation{path, "v1.0.0 canonical release notes mismatch"})
+			}
+		} else if strings.HasPrefix(path, "docs/") || strings.HasPrefix(path, "agent/") {
 			metadata := frontMatter(doc.body)
 			if metadata["plan_id"] != PlanID {
 				result.violations = append(result.violations, Violation{path, "front matter plan_id must be " + PlanID})
