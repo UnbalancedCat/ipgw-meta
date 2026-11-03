@@ -145,6 +145,8 @@ promotion lock 位于 `docs/evidence/releases/v1.0.0/promotion-lock.json`。它�
 
 installation_summary 与 wifi_summary 各仅含 summary_id、sha256，按 [REL-BHK-PROMOTION-002](bhk-acceptance.md#rel-bhk-promotion-002晋升) 核验闭集 ID、canonical 文件哈希、kind、pass、同一 Candidate/build-input 和 runner 绑定。任一缺失、失配或失败阻止晋升；不能当作认证证据。
 
+`docs/evidence/releases/v1.0.0/release-notes.md` 是晋升产物。该文件存在时，doccheck 在这个精确路径上校验规范内容的完整字节（含末尾一个 LF），使用该校验替代通用文档元数据检查。相邻文档仍适用常规规则。promotion 同时校验固定内容及 lock 中的摘要。
+
 `release-notes.md` 必须是以下 canonical UTF-8/LF 内容，不得增加自由文本、HTML、链接查询参数或未由 lock/evidence 支持的能力声明：
 
 ```text
